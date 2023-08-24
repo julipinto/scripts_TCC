@@ -1,0 +1,21 @@
+{
+  "name": "scripts_tcc",
+  "version": "1.0.0",
+  "description": "",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "db:mysql": "node src/scripts/mysql.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "mongodb": "^5.8.1",
+    "mysql2": "^3.6.0",
+    "neo4j-driver": "^5.11.0",
+    "ora": "^7.0.1",
+    "pg": "^8.11.3"
+  }
+}
