@@ -1,5 +1,6 @@
 import mysql from 'mysql2/promise';
 import SpinerLog from '../utils/spinnerlog.js';
+import { round } from '../utils/calc.js';
 
 export default class MysqlConnection {
   #client = null;
@@ -41,7 +42,7 @@ export default class MysqlConnection {
     // console.log(result);
     return {
       result,
-      time: performance.now() - start,
+      time: round(performance.now() - start),
     };
   }
 
