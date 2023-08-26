@@ -14,9 +14,9 @@ export default class FileHandler {
     return path;
   }
 
-  writeOut({ query, filename, data }) {
+  writeOut({ queryName, filename, data }) {
     let dir = this.#createDirIfNotExists(
-      resolve(join('out', this.database, query))
+      resolve(join('out', this.database, queryName))
     );
     let path = resolve(join(dir, filename));
     let writeStream = createWriteStream(path);
@@ -37,13 +37,24 @@ export default class FileHandler {
   }
 
   rangeCountFileName({ node1, node2, type, radius }) {
-    if (type === 'wrqCount') {
-      return `windowRQCount_${node1}_${node2}.${this.FORMAT}`;
+    if (type === dirQueries.windowCount) {
+      return `${dirQueries.windowCount}_${node1}_${node2}.${this.FORMAT}`;
     }
-    return `radiusRQCount_${node1}_r${radius}.${this.FORMAT}`;
+
+    if (type === dirQueries.radiusCount)
+      return `${dirQueries.radiusCount}_${node1}_r${radius}.${this.FORMAT}`;
   }
 
   knnFileName({ node1, k }) {
     return `knn_${node1}_k${k}.${this.FORMAT}`;
   }
 }
+
+export const dirQueries = {
+  distance: 'distance',
+  knn: 'knn',
+  radius: 'radiusRQ',
+  window: 'windowRQ',
+  radiusCount: 'radiusRQCount',
+  windowCount: 'windowRQCount',
+};

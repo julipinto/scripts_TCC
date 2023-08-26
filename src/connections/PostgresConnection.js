@@ -1,5 +1,6 @@
 import postgres from 'pg';
 import SpinerLog from '../utils/spinnerlog.js';
+import { round } from '../utils/calc.js';
 
 export default class PostgresConnection {
   #client = null;
@@ -33,5 +34,18 @@ export default class PostgresConnection {
         this.log.errorConnectDB(error);
       }
     }
+  }
+
+  async query(sql) {
+    let start = performance.now();
+    let result = await this.#client.query(sql);
+    return {
+      result,
+      time: round(performance.now() - start),
+    };
+  }
+
+  async close() {
+    await this.#client.end();
   }
 }

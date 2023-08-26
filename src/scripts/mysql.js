@@ -1,6 +1,6 @@
 import MysqlConnection from '../connections/MysqllConnection.js';
 import { ks, node_pairs, radius } from '../utils/params.js';
-import FileHandler from '../utils/fileHandler.js';
+import FileHandler, { dirQueries } from '../utils/fileHandler.js';
 // r = {
 //   time: 0,
 //   result: {
@@ -69,9 +69,9 @@ async function queryDistance() {
     let r = result[0][0].distance;
     let filename = fileHandler.distanceFileName(pair);
     fileHandler.writeOut({
-      query: 'distance',
+      queryName: dirQueries.distance,
       filename,
-      data: { result: r, time },
+      data: { time, result: r },
     });
   }
   // console.table({ mysql: times });
@@ -85,7 +85,7 @@ async function queryRadiusRange() {
       let { time, result } = await client.query(queries.radiusRange(pair, r));
       let filename = fileHandler.radiusRQFileName({ ...pair, radius: r });
       fileHandler.writeOut({
-        query: 'radiusRQ',
+        queryName: dirQueries.radius,
         filename,
         data: { time, result: result[0].map(({ node_id }) => node_id) },
       });
@@ -101,7 +101,7 @@ async function queryWindowRange() {
     let { time, result } = await client.query(queries.windowRange(pair));
     let filename = fileHandler.windowRQFileName(pair);
     fileHandler.writeOut({
-      query: 'windowRQ',
+      queryName: dirQueries.window,
       filename,
       data: { time, result: result[0].map(({ node_id }) => node_id) },
     });
@@ -110,7 +110,7 @@ async function queryWindowRange() {
 
 // await queryWindowRange();
 
-async function rangeCount() {
+async function queryRangeCount() {
   // let times = [];
   // let results = [];
   // console.log(
@@ -119,9 +119,12 @@ async function rangeCount() {
   // );
   for (let pair of node_pairs) {
     let { time, result } = await client.query(queries.windowRangeCount(pair));
-    let filename = fileHandler.windowRQFileName(pair);
+    let filename = fileHandler.rangeCountFileName({
+      ...pair,
+      type: dirQueries.windowCount,
+    });
     fileHandler.writeOut({
-      query: 'windowRQCount',
+      queryName: dirQueries.windowCount,
       filename,
       data: { time, result: result[0][0]['count'] },
     });
@@ -130,9 +133,13 @@ async function rangeCount() {
       let { time, result } = await client.query(
         queries.radiusRangeCount(pair, r)
       );
-      let filename = fileHandler.radiusRQFileName({ ...pair, radius: r });
+      let filename = fileHandler.rangeCountFileName({
+        ...pair,
+        radius: r,
+        type: dirQueries.radiusCount,
+      });
       fileHandler.writeOut({
-        query: 'radiusRQCount',
+        queryName: dirQueries.radiusCount,
         filename,
         data: { time, result: result[0][0]['count'] },
       });
@@ -150,12 +157,22 @@ async function knn() {
       let { time, result } = await client.query(queries.knn(pair, k));
       let filename = fileHandler.knnFileName({ ...pair, k });
       fileHandler.writeOut({
-        query: 'knn',
+        queryName: dirQueries.knn,
         filename,
         data: { time, result: result[0].map(({ node_id }) => node_id) },
       });
     }
   }
 }
+
+async function runAll() {
+  await queryDistance();
+  await queryRadiusRange();
+  await queryWindowRange();
+  await queryRangeCount();
+  await knn();
+}
+
+// await runAll();
 
 await client.close();
