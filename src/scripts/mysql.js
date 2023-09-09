@@ -19,7 +19,7 @@ const client = new MysqlConnection({
 const queries = {
   distance: ({ node1, node2 }) =>
     'SELECT ' +
-    'ST_Distance(' +
+    'ST_Distance_Sphere(' +
     `(SELECT location FROM nodes WHERE node_id = ${node1}),` +
     `(SELECT location FROM nodes WHERE node_id = ${node2})` +
     ') AS distance;',
@@ -53,6 +53,30 @@ const queries = {
     `ST_Distance_Sphere(n.location, (SELECT location FROM nodes WHERE node_id = ${node1})) AS distance ` +
     `FROM nodes n WHERE n.node_id != ${node1} ` +
     `ORDER BY distance LIMIT ${k};`,
+
+  shortestPath: ({ node1: source_node_id, node2: target_node_id }) => {
+    return {
+      createTemporaryCostTable:
+        'CREATE TEMPORARY TABLE costs (node_id BIGINT PRIMARY KEY, cost INT);',
+      createTemporaryVisitedTable:
+        'CREATE TEMPORARY TABLE visited (node_id BIGINT PRIMARY KEY, visited BOOLEAN);',
+      defineSourceNode: `INSERT INTO costs (node_id, cost) SELECT node_id, CASE WHEN node_id = ${source_node_id} THEN 0 ELSE 999999 END FROM nodes;`,
+      defineVisited: `INSERT INTO visited (node_id, visited) SELECT node_id, FALSE FROM nodes;`,
+      loopAlgorithm:
+        'WHILE (SELECT COUNT(*) FROM visited WHERE visited = FALSE) > 0 DO ' +
+        'SET @current_node_id = (SELECT node_id FROM costs WHERE visited = FALSE ORDER BY cost LIMIT 1);' +
+        'UPDATE visited SET visited = TRUE WHERE node_id = @current_node_id; ' +
+        'UPDATE costs AS c ' +
+        'JOIN way_nodes AS wn ON c.node_id = wn.node_id ' +
+        'JOIN way_nodes AS wn2 ON wn.way_id = wn2.way_id AND wn2.node_id != wn.node_id ' +
+        'JOIN nodes AS n ON wn2.node_id = n.node_id ' +
+        'SET c.cost = LEAST(c.cost, (SELECT cost FROM costs WHERE node_id = @current_node_id) + 1) ' +
+        'WHERE c.node_id = n.node_id AND visited = FALSE; ' +
+        ` IF @current_node_id = ${target_node_id} THEN LEAVE;` +
+        'END IF; ' +
+        'END WHILE;',
+    };
+  },
 };
 
 await client.connect();
@@ -64,9 +88,11 @@ await client.query('SELECT NOW();');
 async function queryDistance() {
   // let times = [];
   // let results = [];
+  // let re = [];
   for (let pair of node_pairs) {
     let { result, time } = await client.query(queries.distance(pair));
-    let r = result[0][0].distance;
+    // let r = result[0][0].distance;
+    // re.push(r);
     let filename = fileHandler.distanceFileName(pair);
     fileHandler.writeOut({
       queryName: dirQueries.distance,
@@ -74,9 +100,12 @@ async function queryDistance() {
       data: { time, result: r },
     });
   }
+  console.log(re.join('\n'));
   // console.table({ mysql: times });
   // console.table({ mysql: results });
 }
+
+// await queryDistance();
 
 // // // // // // // // // // rrq
 async function queryRadiusRange() {
@@ -165,13 +194,39 @@ async function knn() {
   }
 }
 
-async function runAll() {
-  await queryDistance();
-  await queryRadiusRange();
-  await queryWindowRange();
-  await queryRangeCount();
-  await knn();
+async function shortestPath() {
+  let shortestPath = queries.shortestPath(node_pairs[0]);
+
+  try {
+    let r1 = await client.query(shortestPath.createTemporaryCostTable);
+    console.log(r1);
+    let r2 = await client.query(shortestPath.createTemporaryVisitedTable);
+    console.log(r2);
+    let r3 = await client.query(shortestPath.defineSourceNode);
+    console.log(r3);
+    let r4 = await client.query(shortestPath.defineVisited);
+    console.log(r4);
+    let r5 = await client.query(shortestPath.loopAlgorithm);
+    console.log(r5);
+  } catch (error) {
+    console.error(error);
+  }
 }
+
+// await shortestPath();
+
+// async function runAll() {
+//   await queryDistance();
+//   await queryRadiusRange();
+//   await queryWindowRange();
+//   await queryRangeCount();
+//   await knn();
+// }
+
+// let { result } = await client.query(
+//   'SELECT ST_Distance_Sphere(POINT(-74.0060, 40.7128), POINT(-118.2437, 34.0522)) AS distance;'
+// );
+// console.table(result[0]);
 
 // await runAll();
 

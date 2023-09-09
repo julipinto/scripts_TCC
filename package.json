@@ -8,7 +8,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "db:mysql": "node src/scripts/mysql.js",
     "db:neo4j": "node src/scripts/neo4j.js",
-    "db:mongodb": "node src/scripts/mongodb.js",
+    "db:mongo": "node src/scripts/mongodb.js",
     "db:pg": "node src/scripts/postgres.js"
   },
   "keywords": [],

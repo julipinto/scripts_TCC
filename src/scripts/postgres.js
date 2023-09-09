@@ -14,7 +14,7 @@ const queries = {
   distance: ({ node1, node2 }) => `SELECT
     n1.node_id AS source_node_id,
     n2.node_id AS target_node_id,
-    ST_Distance(n1.location, n2.location)AS distance
+    ST_DistanceSphere(n1.location, n2.location) AS distance
     FROM nodes n1 JOIN
     nodes n2 ON n1.node_id = ${node1} AND n2.node_id = ${node2};`,
 
@@ -74,16 +74,22 @@ client.query('SELECT NOW();');
 
 async function queryDistance() {
   // let { result } = await client.query(queries.distance(node_pairs[0]));
+  // let re = [];
 
   for (let pair of node_pairs) {
     let { result, time } = await client.query(queries.distance(pair));
+    // re.push(result.rows[0].distance);
     fileHandler.writeOut({
       queryName: dirQueries.distance,
       filename: fileHandler.distanceFileName(pair),
       data: { time, result: result.rows[0].distance },
     });
   }
+
+  // console.log(re.join('\n'));
 }
+
+await queryDistance();
 
 async function queryRadiusRange() {
   for (let pair of node_pairs) {
@@ -156,7 +162,7 @@ async function knn() {
   }
 }
 
-await knn();
+// await knn();
 
 async function runAll() {
   await queryDistance();
