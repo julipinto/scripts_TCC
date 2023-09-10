@@ -77,6 +77,26 @@ const queries = {
         'END WHILE;',
     };
   },
+  closestPair: ({ key, value }) => {
+    'WITH tagged_nodes AS (' +
+      'SELECT node_id, location ' +
+      'FROM nodes ' +
+      'WHERE node_id IN (' +
+      'SELECT DISTINCT nt1.node_id ' +
+      'FROM node_tags nt1 ' +
+      `WHERE nt1.tag_key = '${key}' AND nt1.tag_value = '${value}' ` +
+      ')' +
+      ')' +
+      'SELECT ' +
+      'nt1.node_id AS node_id_1, ' +
+      'nt2.node_id AS node_id_2, ' +
+      'ST_Distance_Sphere(nt1.location, nt2.location) AS distance ' +
+      'FROM tagged_nodes nt1 ' +
+      'CROSS JOIN tagged_nodes nt2 ' +
+      'WHERE nt1.node_id != nt2.node_id ' +
+      'ORDER BY distance ASC ' +
+      'LIMIT 1; ';
+  },
 };
 
 await client.connect();
@@ -178,7 +198,7 @@ async function queryRangeCount() {
   // console.table({ mysql: results });
 }
 
-async function knn() {
+async function queryKNN() {
   // let times = [];
   // let results = [];
   for (let pair of node_pairs) {

@@ -1,7 +1,7 @@
 import MongodbConnection from '../connections/MongodbConnection.js';
 import { ks, node_pairs, radius } from '../utils/params.js';
 import FileHandler, { dirQueries } from '../utils/fileHandler.js';
-import { ObjectId } from 'mongodb';
+import { round } from '../utils/calc.js';
 
 const fileHandler = new FileHandler('mongodb');
 
@@ -40,10 +40,13 @@ for (const pair of node_pairs) {
   fetchedPoints.push({ node1, node2 });
 }
 
-async function queryDistance() {
-  let re = [];
+function metresToRadians(metres) {
+  return metres / 1000 / 6378.1;
+}
 
+async function queryDistance() {
   for (const pair of fetchedPoints) {
+    let start = performance.now();
     let pipeline = [
       {
         $geoNear: {
@@ -53,7 +56,6 @@ async function queryDistance() {
           },
           distanceField: 'distance',
           spherical: true,
-          // includeLocs: 'locationa',
         },
       },
       {
@@ -66,125 +68,245 @@ async function queryDistance() {
     let aggregate = client.nodes_collection.aggregate(pipeline);
 
     let result = await aggregate.toArray();
-    re.push(result[0].distance);
-  }
 
-  console.log(re.join('\n'));
+    let filename = fileHandler.distanceFileName({
+      node1: pair.node1._id,
+      node2: pair.node2._id,
+    });
+    fileHandler.writeOut({
+      queryName: dirQueries.distance,
+      filename,
+      data: {
+        time: round(performance.now() - start),
+        result: result[0].distance,
+      },
+    });
+  }
 }
 // let re = [];
 
-await queryDistance();
+// await queryDistance();
 
-async function knn() {
-  const node1 = await client.nodes_collection.findOne({
-    _id: node_pairs[0].node1,
-  });
+async function queryRadiusRange() {
+  // console.log(fetchedPoints[0].node1);
+  for (const { node1 } of fetchedPoints) {
+    for (const r of radius) {
+      let start = performance.now();
 
-  let result = client.nodes_collection.aggregate([
-    {
-      $nearSphere: {
-        near: {
-          type: 'Point',
-          coordinates: [-118.2437, 34.0522],
+      const result = await client.nodes_collection
+        .find({
+          location: {
+            $geoWithin: {
+              $centerSphere: [node1.location.coordinates, metresToRadians(r)],
+            },
+          },
+        })
+        .toArray();
+
+      let filename = fileHandler.radiusRQFileName({
+        node1: node1._id,
+        radius: r,
+      });
+
+      fileHandler.writeOut({
+        queryName: dirQueries.radius,
+        filename,
+        data: {
+          time: round(performance.now() - start),
+          result: result.map((node) => node._id),
         },
-        distanceField: 'distance',
-        spherical: true,
-      },
-    },
-    {
-      $match: {
-        _id: 123456, // Exclui o próprio ponto
-      },
-    },
-  ]);
-
-  console.log(JSON.stringify(await result.toArray()));
+      });
+    }
+  }
 }
 
-// await knn();
+// await queryRadiusRange();
 
-// let pipeline = [
-//   {
-//     $geoNear: {
-//       near: {
-//         type: 'Point',
-//         coordinates: node1.location.coordinates,
-//       },
-//       distanceField: 'distance',
-//       spherical: true,
-//     },
-//   },
-//   {
-//     $limit: ks[0],
-//   },
-// ];
+async function queryWindowRange() {
+  for (const { node1, node2 } of fetchedPoints) {
+    let start = performance.now();
 
-// let pipeline = [
-//   {
-//     $geoNear: {
-//       near: {
-//         type: 'Point',
-//         coordinates: node1.location.coordinates,
-//       },
-//       distanceField: 'distance',
-//       spherical: true,
-//     },
-//   },
-//   {
-//     $match: {
-//       _id: { $not: { $eq: node1._id } }, // Exclui o próprio ponto
-//     },
-//   },
-//   {
-//     $limit: 6,
-//   },
-// ];
+    const result = await client.nodes_collection
+      .find({
+        location: {
+          $geoWithin: {
+            $box: [node1.location.coordinates, node2.location.coordinates],
+          },
+        },
+      })
+      .toArray();
 
-// let pipeline = [
-//   {
-//     $geoNear: {
-//       near: {
-//         type: 'Point',
-//         coordinates: node1.location.coordinates,
-//       },
-//       distanceField: 'distance',
-//       spherical: true,
-//     },
-//   },
-//   {
-//     $match: {
-//       _id: { $not: { $eq: node1._id } }, // Exclui o próprio ponto
-//     },
-//   },
-//   {
-//     $sort: { distance: 1 }, // Ordena os resultados pela distância em ordem crescente
-//   },
-//   {
-//     $limit: ks[0],
-//   },
-// ];
+    let filename = fileHandler.windowRQFileName({
+      node1: node1._id,
+      node2: node2._id,
+    });
 
-// let result = client.nodes_collection.aggregate(pipeline);
+    fileHandler.writeOut({
+      queryName: dirQueries.window,
+      filename,
+      data: {
+        time: round(performance.now() - start),
+        result: result.map((node) => node._id),
+      },
+    });
+  }
+}
 
-// let result = client.nodes_collection
-//   .find({
-//     location: {
-//       $nearSphere: {
-//         $geometry: { type: 'Point', coordinates: node1.location.coordinates },
-//       },
-//     },
-//   })
-//   .limit(ks[1] + 1);
+// await queryWindowRange();
 
-// client.nodes_collection.insertOne({
-//   _id: 123456,
-//   location: { type: 'Point', coordinates: [-74.006, 40.7128] },
-// });
+async function queryRangeCount() {
+  for (const { node1, node2 } of fetchedPoints) {
+    let startWindow = performance.now();
+    let result = await client.nodes_collection.countDocuments({
+      location: {
+        $geoWithin: {
+          $box: [node1.location.coordinates, node2.location.coordinates],
+        },
+      },
+    });
+    let filenameWindow = fileHandler.rangeCountFileName({
+      node1: node1._id,
+      node2: node2._id,
+      type: dirQueries.windowCount,
+    });
 
-// SELECT ST_Distance_Sphere(
-//     ST_GeomFromText('POINT(-38.5023 -12.9716)', 4326),
-//     ST_GeomFromText('POINT(-46.6333 -23.5505)', 4326)
-// ) AS distance;
+    fileHandler.writeOut({
+      queryName: dirQueries.windowCount,
+      filename: filenameWindow,
+      data: {
+        time: round(performance.now() - startWindow),
+        result,
+      },
+    });
+
+    for (const r of radius) {
+      let startRadius = performance.now();
+      let result = await client.nodes_collection.countDocuments({
+        location: {
+          $geoWithin: {
+            $centerSphere: [node1.location.coordinates, metresToRadians(r)],
+          },
+        },
+      });
+
+      let filenameRadius = fileHandler.rangeCountFileName({
+        node1: node1._id,
+        radius: r,
+        type: dirQueries.radiusCount,
+      });
+
+      fileHandler.writeOut({
+        queryName: dirQueries.radiusCount,
+        filename: filenameRadius,
+        data: {
+          time: round(performance.now() - startRadius),
+          result,
+        },
+      });
+    }
+  }
+}
+
+// await queryRangeCount();
+
+async function queryKNN() {
+  for (const { node1 } of fetchedPoints) {
+    for (const k of ks) {
+      const start = performance.now();
+
+      const pipeline = [
+        {
+          $geoNear: {
+            near: {
+              type: 'Point',
+              coordinates: node1.location.coordinates,
+            },
+            distanceField: 'distance',
+            spherical: true,
+          },
+        },
+        {
+          $match: {
+            _id: { $ne: node1._id }, // Exclude node1
+          },
+        },
+        {
+          $limit: 5,
+        },
+      ];
+
+      const result = await client.nodes_collection
+        .aggregate(pipeline)
+        .toArray();
+
+      let filename = fileHandler.knnFileName({
+        node1: node1._id,
+        k,
+      });
+
+      fileHandler.writeOut({
+        queryName: dirQueries.knn,
+        filename,
+        data: {
+          time: round(performance.now() - start),
+          result: result.map((node) => node._id),
+        },
+      });
+    }
+  }
+}
+
+async function queryClosestPair() {
+  const result = await client.nodes_collection
+    .aggregate([
+      { $match: { power: 'tower' } },
+      {
+        $project: {
+          _id: 0,
+          node1: { $mergeObjects: '$$ROOT' },
+        },
+      },
+      {
+        $lookup: {
+          from: 'nodes',
+          as: 'node2',
+          let: {
+            cur_id: '$node1._id',
+            coords: '$node1.location.coordinates',
+          },
+          pipeline: [
+            {
+              $geoNear: {
+                near: {
+                  type: 'Point',
+                  coordinates: '$$coords',
+                },
+                distanceField: 'distance',
+                spherical: true,
+              },
+            },
+            { $match: { power: 'tower', distance: { $gt: 0 } } },
+            { $sort: { distance: 1 } },
+            { $limit: 1 },
+          ],
+        },
+      },
+      { $unwind: '$node2' },
+      { $sort: { 'node2.distance': 1 } },
+      { $limit: 1 },
+      { $set: { distance: '$node2.distance' } },
+      { $unset: 'node2.distance' },
+    ])
+    .toArray();
+
+  console.log(result);
+
+  console.log(
+    result.filter((node) => node.node1._id === node.node2._id).length
+  );
+}
+// await queryKNN();
+await queryClosestPair();
 
 await client.close();
 
@@ -217,3 +339,67 @@ await client.close();
 //   console.log(JSON.stringify(await result.toArray()));
 // }
 // await teste();
+
+// { $match: { power: 'tower' } },
+// {
+//   $set: {
+//     lat: {
+//       $multiply: [{ $last: '$location.coordinates' }, 0.017452778],
+//     },
+//     long: {
+//       $multiply: [{ $first: '$location.coordinates' }, 0.017452778],
+//     },
+//   },
+// },
+//     ],
+//   },
+// },
+// {
+//   $unwind: '$closestNode',
+// },
+// {
+//   $match: {
+//     'closestNode._id': { $ne: '$_id' },
+//   },
+// },
+// {
+//   $addFields: {
+//     distance: {
+//       $sqrt: {
+//         $sum: [
+//           {
+//             $pow: [
+//               {
+//                 $subtract: [
+//                   '$location.coordinates[0]',
+//                   '$closestNode.location.coordinates[0]',
+//                 ],
+//               },
+//               2,
+//             ],
+//           },
+//           {
+//             $pow: [
+//               {
+//                 $subtract: [
+//                   '$location.coordinates[1]',
+//                   '$closestNode.location.coordinates[1]',
+//                 ],
+//               },
+//               2,
+//             ],
+//           },
+//         ],
+//       },
+//     },
+//   },
+// },
+// { $match: { distance: { $gt: 0 } } },
+// {
+//   $sort: {
+//     distance: 1,
+//   },
+// },
+// {
+//   $limit: 1,
+// },
