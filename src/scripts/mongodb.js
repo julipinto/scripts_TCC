@@ -256,24 +256,35 @@ async function queryKNN() {
   }
 }
 
+// await queryKNN();
+
 async function queryClosestPair() {
+  // Para match do key e value
+  // $match: {
+  //       $expr: {
+  //         $eq: [`$${key}`, value], // Isso irá corresponder a um campo com a chave "key" e valor "value"
+  //       },
+  // },
+
+  // Para match só do value
+  // await client.nodes_collection.createIndex({ '$**': 'text' });
+  // const valueToSearch = 'towerA'; // O valor que você deseja procurar
+  //  {
+  //   $match: {
+  //     $text: {
+  //       $search: valueToSearch,
+  //     },
+  //   },
+  // },
+
   const result = await client.nodes_collection
     .aggregate([
       { $match: { power: 'tower' } },
       {
-        $project: {
-          _id: 0,
-          node1: { $mergeObjects: '$$ROOT' },
-        },
-      },
-      {
         $lookup: {
           from: 'nodes',
-          as: 'node2',
-          let: {
-            cur_id: '$node1._id',
-            coords: '$node1.location.coordinates',
-          },
+          as: 'closestNode',
+          let: { coords: '$location.coordinates' },
           pipeline: [
             {
               $geoNear: {
@@ -281,31 +292,24 @@ async function queryClosestPair() {
                   type: 'Point',
                   coordinates: '$$coords',
                 },
-                distanceField: 'distance',
+                distanceField: 'distFromMe',
                 spherical: true,
+                query: { power: 'tower' },
               },
             },
-            { $match: { power: 'tower', distance: { $gt: 0 } } },
-            { $sort: { distance: 1 } },
+            { $skip: 1 },
             { $limit: 1 },
           ],
         },
       },
-      { $unwind: '$node2' },
-      { $sort: { 'node2.distance': 1 } },
+      { $set: { closestNode: { $first: '$closestNode' } } },
+      { $sort: { 'closestNode.distFromMe': 1 } },
       { $limit: 1 },
-      { $set: { distance: '$node2.distance' } },
-      { $unset: 'node2.distance' },
     ])
     .toArray();
 
   console.log(result);
-
-  console.log(
-    result.filter((node) => node.node1._id === node.node2._id).length
-  );
 }
-// await queryKNN();
 await queryClosestPair();
 
 await client.close();
