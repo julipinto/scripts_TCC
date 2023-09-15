@@ -4,7 +4,7 @@
 
 import Neo4jConnection from '../connections/Neo4jConnection.js';
 import { ks, node_pairs, radius } from '../utils/params.js';
-import FileHandler, { dirQueries } from '../utils/fileHandler.js';
+import FileHandler, { dirQueries } from '../utils/FileHandler.js';
 
 const fileHandler = new FileHandler('neo4j');
 
@@ -29,7 +29,57 @@ const queries = {
     `MATCH (node1:POINT {id: ${node1}}) ` +
     `MATCH (node2:POINT {id: ${node2}}) ` +
     'RETURN point.distance(node1.location, node2.location) AS distance;',
+  radiusRange: ({ node1 }, radius) =>
+    `MATCH (node:POINT {id: ${node1}}) ` +
+    'MATCH (node2:POINT) ' +
+    `WHERE point.distance(node.location, node2.location) < ${radius} ` +
+    'RETURN node2;',
+  windowRange: ({ node1, node2 }) =>
+    'MATCH (node1:POINT) ' +
+    `MATCH (b1:POINT {id: ${node1}}) ` +
+    `MATCH (b2:POINT {id: ${node2}}) ` +
+    'WHERE point.withinBBox(node1.location, b1.location, b2.location) OR point.withinBBox(node1.location, b2.location, b1.location) ' +
+    'RETURN node1;',
+  radiusCount: ({ node1 }, radius) =>
+    `MATCH (node:POINT {id: ${node1}}) ` +
+    'MATCH (node2:POINT) ' +
+    `WHERE point.distance(node.location, node2.location) < ${radius} ` +
+    'RETURN count(node2) AS nodeCount;',
+  windowCount: ({ node1, node2 }) =>
+    'MATCH (node1:POINT) ' +
+    `MATCH (b1:POINT {id: ${node1}}) ` +
+    `MATCH (b2:POINT {id: ${node2}}) ` +
+    'WHERE point.withinBBox(node1.location, b1.location, b2.location) ' +
+    'RETURN count(node1) AS nodeCount;',
+  closestPair: ({ node1 }) =>
+    "MATCH (node1:POINT {power: 'tower'}) " +
+    "MATCH (node2:POINT {power: 'tower'}) " +
+    'WHERE node1.id <> node2.id ' +
+    'WITH node1, node2 ' +
+    'ORDER BY point.distance(node1.location, node2.location) ' +
+    'LIMIT 1 ' +
+    'RETURN {node1: node1, node2: node2, distance: point.distance(b1.location, b2.location)}; ',
+  knn: ({ node1 }, k) =>
+    `MATCH (target:POINT {id: ${node1}}) ` +
+    'MATCH (other:POINT) ' +
+    'WHERE target.id <> other.id  ' +
+    'WITH target, other ' +
+    'ORDER BY point.distance(other.location, target.location) ' +
+    `LIMIT ${k} ` +
+    'RETURN other, point.distance(other.location, target.location) AS distance; ',
 };
+
+// MATCH (node1:POINT)
+// MATCH (b1:POINT {id: 4662482749})
+// MATCH (b2:POINT {id: 7410560799})
+// WHERE point.withinBBox(node1.location, b1.location, b2.location) OR point.withinBBox(node1.location, b2.location, b1.location)
+// RETURN node1;
+
+// MATCH (node1:POINT)
+// MATCH (b1:POINT {id: 4662482749})
+// MATCH (b2:POINT {id: 7410560799})
+// WHERE point.withinBBox(node1.location, b1.location, b2.location) OR point.withinBBox(node1.location, b2.location, b1.location)
+// RETURN count(node1) AS nodeCount;
 
 async function queryDistance() {
   // console.log(node_pairs[0]);

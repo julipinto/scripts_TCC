@@ -1,6 +1,6 @@
 import MysqlConnection from '../connections/MysqllConnection.js';
 import { ks, node_pairs, radius } from '../utils/params.js';
-import FileHandler, { dirQueries } from '../utils/fileHandler.js';
+import FileHandler, { dirQueries } from '../utils/FileHandler.js';
 // r = {
 //   time: 0,
 //   result: {

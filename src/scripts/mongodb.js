@@ -1,6 +1,6 @@
 import MongodbConnection from '../connections/MongodbConnection.js';
 import { ks, node_pairs, radius } from '../utils/params.js';
-import FileHandler, { dirQueries } from '../utils/fileHandler.js';
+import FileHandler, { dirQueries } from '../utils/FileHandler.js';
 import { round } from '../utils/calc.js';
 
 const fileHandler = new FileHandler('mongodb');
@@ -259,24 +259,6 @@ async function queryKNN() {
 // await queryKNN();
 
 async function queryClosestPair() {
-  // Para match do key e value
-  // $match: {
-  //       $expr: {
-  //         $eq: [`$${key}`, value], // Isso irá corresponder a um campo com a chave "key" e valor "value"
-  //       },
-  // },
-
-  // Para match só do value
-  // await client.nodes_collection.createIndex({ '$**': 'text' });
-  // const valueToSearch = 'towerA'; // O valor que você deseja procurar
-  //  {
-  //   $match: {
-  //     $text: {
-  //       $search: valueToSearch,
-  //     },
-  //   },
-  // },
-
   const result = await client.nodes_collection
     .aggregate([
       { $match: { power: 'tower' } },

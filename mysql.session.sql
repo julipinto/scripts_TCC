@@ -130,3 +130,13 @@ LIMIT 1;
 --     WHERE tag_key = 'power' AND tag_value = 'tower'
 -- ) AS nt2
 -- WHERE n1.node_id != nt2.node_id;
+
+-- @block
+SELECT wt.way_id, wt.tag_key, wt.tag_value FROM way_tags wt
+JOIN ways w ON wt.way_id = w.way_id 
+WHERE w.way_id IN (
+    SELECT DISTINCT wn.way_id
+    FROM way_nodes wn
+    JOIN node_tags nt ON wn.node_id = nt.node_id
+    WHERE nt.tag_key = 'power' AND nt.tag_value = 'tower'
+);

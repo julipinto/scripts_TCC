@@ -5,7 +5,7 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "order:pairs": "node src/utils/orderNodePairs.js",
     "db:mysql": "node src/scripts/mysql.js",
     "db:neo4j": "node src/scripts/neo4j.js",
     "db:mongo": "node src/scripts/mongodb.js",
