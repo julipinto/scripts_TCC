@@ -245,5 +245,5 @@ export async function runAllMySQL() {
 // );
 // console.table(result[0]);
 
-await runAllMySQL();
+// await runAllMySQL();
 // await client.close();

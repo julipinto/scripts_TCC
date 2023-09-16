@@ -1,5 +1,5 @@
 import MongodbConnection from '../connections/MongodbConnection.js';
-import { ks, node_pairs, radius } from '../utils/params.js';
+import { ks, node_pairs, radius, tagClosestPair } from '../utils/params.js';
 import FileHandler, { dirQueries } from '../utils/FileHandler.js';
 import { round } from '../utils/calc.js';
 
@@ -11,33 +11,38 @@ const client = new MongodbConnection({
   password: 'root',
 });
 
-await client.connect();
+// await client.connect();
 
-const queries = {
-  distance: ({ node1: sourceNodeId, node2: targetNodeId }) => {
-    return {};
-  },
+// const queries = {
+//   distance: ({ node1: sourceNodeId, node2: targetNodeId }) => {
+//     return {};
+//   },
 
-  radiusRange: ({ node1 }, radius) => ``,
-  windowRange: ({ node1, node2 }) => ``,
-  radiusRangeCount: ({ node1 }, radius) => ``,
-  windowRangeCount: ({ node1, node2 }) => ``,
-  knn: ({ node1 }, k) => ``,
-  shortestPath: ({ node1: source_node_id, node2: target_node_id }) => ``,
-};
+//   radiusRange: ({ node1 }, radius) => ``,
+//   windowRange: ({ node1, node2 }) => ``,
+//   radiusRangeCount: ({ node1 }, radius) => ``,
+//   windowRangeCount: ({ node1, node2 }) => ``,
+//   knn: ({ node1 }, k) => ``,
+//   shortestPath: ({ node1: source_node_id, node2: target_node_id }) => ``,
+// };
 
 // First we need to fetch the nodes from the database
 let fetchedPoints = [];
-for (const pair of node_pairs) {
-  const node1 = await client.nodes_collection.findOne({
-    _id: pair.node1,
-  });
 
-  const node2 = await client.nodes_collection.findOne({
-    _id: pair.node2,
-  });
+async function fetchNodes() {
+  console.time('Pre-Fetch All Nodes');
+  for (const pair of node_pairs) {
+    const node1 = await client.nodes_collection.findOne({
+      _id: pair.node1,
+    });
 
-  fetchedPoints.push({ node1, node2 });
+    const node2 = await client.nodes_collection.findOne({
+      _id: pair.node2,
+    });
+
+    fetchedPoints.push({ node1, node2 });
+  }
+  console.timeEnd('Pre-Fetch All Nodes');
 }
 
 function metresToRadians(metres) {
@@ -45,6 +50,8 @@ function metresToRadians(metres) {
 }
 
 async function queryDistance() {
+  console.time('Query All Distance');
+
   for (const pair of fetchedPoints) {
     let start = performance.now();
     let pipeline = [
@@ -82,12 +89,15 @@ async function queryDistance() {
       },
     });
   }
+  console.timeEnd('Query All Distance');
 }
 // let re = [];
 
 // await queryDistance();
 
 async function queryRadiusRange() {
+  console.time('Query All Radius Range');
+
   // console.log(fetchedPoints[0].node1);
   for (const { node1 } of fetchedPoints) {
     for (const r of radius) {
@@ -118,11 +128,14 @@ async function queryRadiusRange() {
       });
     }
   }
+  console.timeEnd('Query All Radius Range');
 }
 
 // await queryRadiusRange();
 
 async function queryWindowRange() {
+  console.time('Query All Window Range');
+
   for (const { node1, node2 } of fetchedPoints) {
     let start = performance.now();
 
@@ -150,11 +163,14 @@ async function queryWindowRange() {
       },
     });
   }
+  console.timeEnd('Query All Window Range');
 }
 
 // await queryWindowRange();
 
 async function queryRangeCount() {
+  console.time('Query All Range Count');
+
   for (const { node1, node2 } of fetchedPoints) {
     let startWindow = performance.now();
     let result = await client.nodes_collection.countDocuments({
@@ -205,11 +221,14 @@ async function queryRangeCount() {
       });
     }
   }
+  console.timeEnd('Query All Range Count');
 }
 
 // await queryRangeCount();
 
 async function queryKNN() {
+  console.time('Query All KNN');
+
   for (const { node1 } of fetchedPoints) {
     for (const k of ks) {
       const start = performance.now();
@@ -225,14 +244,8 @@ async function queryKNN() {
             spherical: true,
           },
         },
-        {
-          $match: {
-            _id: { $ne: node1._id }, // Exclude node1
-          },
-        },
-        {
-          $limit: 5,
-        },
+        { $match: { _id: { $ne: node1._id } } }, // Exclude node1
+        { $limit: k },
       ];
 
       const result = await client.nodes_collection
@@ -254,138 +267,98 @@ async function queryKNN() {
       });
     }
   }
+  console.timeEnd('Query All KNN');
 }
 
 // await queryKNN();
 
-async function queryClosestPair() {
-  const result = await client.nodes_collection
-    .aggregate([
-      { $match: { power: 'tower' } },
-      {
-        $lookup: {
-          from: 'nodes',
-          as: 'closestNode',
-          let: { coords: '$location.coordinates' },
-          pipeline: [
-            {
-              $geoNear: {
-                near: {
-                  type: 'Point',
-                  coordinates: '$$coords',
+async function queryKClosestPair() {
+  console.time('Query All K Closest Pair');
+
+  for (let k of ks) {
+    const start = performance.now();
+
+    const result = await client.nodes_collection
+      .aggregate([
+        { $match: { [tagClosestPair.key]: tagClosestPair.value } },
+        {
+          $lookup: {
+            from: 'nodes',
+            as: 'closestNode',
+            let: { coords: '$location.coordinates' },
+            pipeline: [
+              {
+                $geoNear: {
+                  near: {
+                    type: 'Point',
+                    coordinates: '$$coords',
+                  },
+                  distanceField: 'distFromMe',
+                  spherical: true,
+                  query: { [tagClosestPair.key]: tagClosestPair.value },
                 },
-                distanceField: 'distFromMe',
-                spherical: true,
-                query: { power: 'tower' },
               },
-            },
-            { $skip: 1 },
-            { $limit: 1 },
-          ],
+              { $skip: 1 },
+              { $limit: 1 },
+            ],
+          },
         },
+        { $set: { closestNode: { $first: '$closestNode' } } },
+        { $sort: { 'closestNode.distFromMe': 1 } },
+        { $limit: k * 2 },
+      ])
+      .toArray();
+
+    let map_r = result.map((r) => ({
+      node_id1: r._id,
+      node_id2: r.closestNode._id,
+      distance: r.closestNode.distFromMe,
+    }));
+
+    let hashIds = new Set();
+
+    let r = map_r.filter(({ node_id1, node_id2 }) => {
+      if (hashIds.has(node_id1) || hashIds.has(node_id2)) {
+        return false;
+      }
+      hashIds.add([node_id1, node_id2]);
+      return true;
+    });
+
+    let filename = fileHandler.kClosestPairFileName({
+      k,
+    });
+
+    fileHandler.writeOut({
+      queryName: dirQueries.kClosestPair,
+      filename,
+      data: {
+        time: round(performance.now() - start),
+        result: r,
       },
-      { $set: { closestNode: { $first: '$closestNode' } } },
-      { $sort: { 'closestNode.distFromMe': 1 } },
-      { $limit: 1 },
-    ])
-    .toArray();
+    });
+  }
 
-  console.log(result);
+  console.timeEnd('Query All K Closest Pair');
 }
-// await queryClosestPair();
 
-await client.close();
+// await queryKClosestPair();
 
-// async function teste() {
-//   // await client.nodes_collection.insertOne({
-//   //   _id: 0,
-//   //   location: { type: 'Point', coordinates: [0, 0] },
-//   // });
+// await client.close();
 
-//   let result = client.nodes_collection.aggregate([
-//     {
-//       $geoNear: {
-//         //result is half the Earth's circumference, distance from (0,0) to (180,0)
-//         near: {
-//           type: 'Point',
-//           coordinates: [180, 0],
-//         },
-//         distanceField: 'distance',
-//         distanceMultiplier: 1 / Math.PI, // 2*Pi*radius is the circumference, so radius is half the circumference divided by Pi
-//         spherical: true,
-//       },
-//     },
-//     {
-//       $match: {
-//         _id: 0, // Filter only the point of interest
-//       },
-//     },
-//   ]);
+export async function runAllMongodb() {
+  console.log('Running MongoDB queries');
+  await client.connect();
+  // await client.query('SELECT NOW();');
+  await fetchNodes();
 
-//   console.log(JSON.stringify(await result.toArray()));
-// }
-// await teste();
+  await queryDistance();
+  await queryRadiusRange();
+  await queryWindowRange();
+  await queryRangeCount();
+  await queryKNN();
+  await queryKClosestPair();
+  await client.close();
+}
 
-// { $match: { power: 'tower' } },
-// {
-//   $set: {
-//     lat: {
-//       $multiply: [{ $last: '$location.coordinates' }, 0.017452778],
-//     },
-//     long: {
-//       $multiply: [{ $first: '$location.coordinates' }, 0.017452778],
-//     },
-//   },
-// },
-//     ],
-//   },
-// },
-// {
-//   $unwind: '$closestNode',
-// },
-// {
-//   $match: {
-//     'closestNode._id': { $ne: '$_id' },
-//   },
-// },
-// {
-//   $addFields: {
-//     distance: {
-//       $sqrt: {
-//         $sum: [
-//           {
-//             $pow: [
-//               {
-//                 $subtract: [
-//                   '$location.coordinates[0]',
-//                   '$closestNode.location.coordinates[0]',
-//                 ],
-//               },
-//               2,
-//             ],
-//           },
-//           {
-//             $pow: [
-//               {
-//                 $subtract: [
-//                   '$location.coordinates[1]',
-//                   '$closestNode.location.coordinates[1]',
-//                 ],
-//               },
-//               2,
-//             ],
-//           },
-//         ],
-//       },
-//     },
-//   },
-// },
-// { $match: { distance: { $gt: 0 } } },
-// {
-//   $sort: {
-//     distance: 1,
-//   },
-// },
-// {
-//   $limit: 1,
-// },
+// await runAllMongodb();

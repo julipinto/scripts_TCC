@@ -233,6 +233,6 @@ export async function runAllPostgres() {
   await client.close();
 }
 
-await runAllPostgres();
+// await runAllPostgres();
 
 // await queryDistance();
