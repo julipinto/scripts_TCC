@@ -292,7 +292,7 @@ async function queryClosestPair() {
 
   console.log(result);
 }
-await queryClosestPair();
+// await queryClosestPair();
 
 await client.close();
 
