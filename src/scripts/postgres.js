@@ -1,5 +1,5 @@
 import PostgresConnection from '../connections/PostgresConnection.js';
-import { ks, node_pairs, radius } from '../utils/params.js';
+import { ks, node_pairs, radius, tagClosestPair } from '../utils/params.js';
 import FileHandler, { dirQueries } from '../utils/FileHandler.js';
 
 const fileHandler = new FileHandler('postgres');
@@ -65,17 +65,34 @@ FROM
             ${k}
     ) AS source_node
 WHERE
-    target_node.node_id = ${node1};
-`,
-};
+    target_node.node_id = ${node1};`,
 
-client.connect();
-client.query('SELECT NOW();');
+  kClosestPair: ({ key, value, k }) =>
+    'WITH tagged_nodes AS (' +
+    'SELECT node_id, location ' +
+    'FROM nodes ' +
+    'WHERE node_id IN (' +
+    'SELECT DISTINCT nt1.node_id ' +
+    'FROM node_tags nt1 ' +
+    `WHERE nt1.tag_key = '${key}' AND nt1.tag_value = '${value}' ` +
+    ')' +
+    ')' +
+    'SELECT ' +
+    'nt1.node_id AS node_id1, ' +
+    'nt2.node_id AS node_id2, ' +
+    'ST_DistanceSphere(nt1.location, nt2.location) AS distance ' +
+    'FROM tagged_nodes nt1 ' +
+    'CROSS JOIN tagged_nodes nt2 ' +
+    'WHERE nt1.node_id != nt2.node_id ' +
+    'ORDER BY distance ASC ' +
+    `LIMIT ${k};`,
+};
 
 async function queryDistance() {
   // let { result } = await client.query(queries.distance(node_pairs[0]));
   // let re = [];
 
+  console.time('Query All Distance');
   for (let pair of node_pairs) {
     let { result, time } = await client.query(queries.distance(pair));
     // re.push(result.rows[0].distance);
@@ -85,13 +102,12 @@ async function queryDistance() {
       data: { time, result: result.rows[0].distance },
     });
   }
-
+  console.timeEnd('Query All Distance');
   // console.log(re.join('\n'));
 }
 
-await queryDistance();
-
 async function queryRadiusRange() {
+  console.time('Query All Radius Range');
   for (let pair of node_pairs) {
     for (let r of radius) {
       let { result, time } = await client.query(queries.radiusRange(pair, r));
@@ -102,9 +118,11 @@ async function queryRadiusRange() {
       });
     }
   }
+  console.timeEnd('Query All Radius Range');
 }
 
 async function queryWindowRange() {
+  console.time('Query All Window Range');
   for (let pair of node_pairs) {
     let { result, time } = await client.query(queries.windowRange(pair));
     fileHandler.writeOut({
@@ -113,9 +131,11 @@ async function queryWindowRange() {
       data: { time, result: result.rows.map(({ node_id }) => node_id) },
     });
   }
+  console.timeEnd('Query All Window Range');
 }
 
 async function queryRangeCount() {
+  console.time('Query All Range Count');
   for (let pair of node_pairs) {
     let { result, time } = await client.query(queries.windowRangeCount(pair));
     fileHandler.writeOut({
@@ -142,11 +162,13 @@ async function queryRangeCount() {
       });
     }
   }
+  console.timeEnd('Query All Range Count');
 }
 
 // await queryRangeCount();
 
-async function knn() {
+async function queryKNN() {
+  console.time('Query All KNN');
   for (let pair of node_pairs) {
     for (let k of ks) {
       let { result, time } = await client.query(queries.knn(pair, k));
@@ -160,20 +182,57 @@ async function knn() {
       });
     }
   }
+  console.timeEnd('Query All KNN');
 }
 
 // await knn();
 
-async function runAll() {
+async function queryKClosestPair() {
+  console.time('Query All K Closest Pair');
+  for (let k of ks) {
+    let query = queries.kClosestPair({
+      ...tagClosestPair,
+      k: k * 2,
+    });
+
+    let { time, result } = await client.query(query);
+    // console.log(result.rows);
+    // break;
+
+    let hashIds = new Set();
+
+    let filename = fileHandler.kClosestPairFileName({ k });
+
+    let r = result.rows.filter(({ node_id1, node_id2 }) => {
+      if (hashIds.has(node_id1) || hashIds.has(node_id2)) {
+        return false;
+      }
+      hashIds.add([node_id1, node_id2]);
+      return true;
+    });
+
+    fileHandler.writeOut({
+      queryName: dirQueries.kClosestPair,
+      filename,
+      data: { time, result: r },
+    });
+  }
+  console.timeEnd('Query All K Closest Pair');
+}
+
+export async function runAllPostgres() {
+  console.log('Running Postgres queries');
+  await client.connect();
+  await client.query('SELECT NOW();');
   await queryDistance();
   await queryRadiusRange();
   await queryWindowRange();
   await queryRangeCount();
-  await knn();
+  await queryKNN();
+  await queryKClosestPair();
+  await client.close();
 }
 
-// await runAll();
+await runAllPostgres();
 
 // await queryDistance();
-
-await client.close();
