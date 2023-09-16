@@ -84,7 +84,7 @@ async function queryDistance() {
   // let times = [];
   // let results = [];
   // let re = [];
-  console.time('Query Distance');
+  console.time('Query All Distance');
   for (let pair of node_pairs) {
     let { result, time } = await client.query(queries.distance(pair));
     let r = result[0][0].distance;
@@ -96,14 +96,14 @@ async function queryDistance() {
       data: { time, result: r },
     });
   }
-  console.timeEnd('Query Distance');
+  console.timeEnd('Query All Distance');
 }
 
 // await queryDistance();
 
 // // // // // // // // // // rrq
 async function queryRadiusRange() {
-  console.time('Query Radius Range');
+  console.time('Query All Radius Range');
   for (let pair of node_pairs) {
     for (let r of radius) {
       let { time, result } = await client.query(queries.radiusRange(pair, r));
@@ -115,14 +115,14 @@ async function queryRadiusRange() {
       });
     }
   }
-  console.timeEnd('Query Radius Range');
+  console.timeEnd('Query All Radius Range');
 }
 
 // // // // // // // // // // wrq
 async function queryWindowRange() {
   // let { result } = await client.query(queries.wrq(node_pairs[0]));
   // console.log(result);
-  console.time('Query Window Range');
+  console.time('Query All Window Range');
   for (let pair of node_pairs) {
     let { time, result } = await client.query(queries.windowRange(pair));
     let filename = fileHandler.windowRQFileName(pair);
@@ -132,7 +132,7 @@ async function queryWindowRange() {
       data: { time, result: result[0].map(({ node_id }) => node_id) },
     });
   }
-  console.timeEnd('Query Window Range');
+  console.timeEnd('Query All Window Range');
 }
 
 // await queryWindowRange();
@@ -144,7 +144,7 @@ async function queryRangeCount() {
   //   (await client.query(queries.windowRangeCount(node_pairs[0]))).result[0][0]
   //     .count
   // );
-  console.time('Query Range Count');
+  console.time('Query All Range Count');
   for (let pair of node_pairs) {
     // ////////////// window
     let { time, result } = await client.query(queries.windowRangeCount(pair));
@@ -175,13 +175,13 @@ async function queryRangeCount() {
       });
     }
   }
-  console.timeEnd('Query Range Count');
+  console.timeEnd('Query All Range Count');
 }
 
 async function queryKNN() {
   // let times = [];
   // let results = [];
-  console.time('Query KNN');
+  console.time('Query All KNN');
   for (let pair of node_pairs) {
     for (let k of ks) {
       let { time, result } = await client.query(queries.knn(pair, k));
@@ -193,11 +193,11 @@ async function queryKNN() {
       });
     }
   }
-  console.timeEnd('Query KNN');
+  console.timeEnd('Query All KNN');
 }
 
 async function queryKClosestPair() {
-  console.time('Query K Closest Pair');
+  console.time('Query All K Closest Pair');
   for (let k of ks) {
     let query = queries.kClosestPair({
       ...tagClosestPair,
@@ -224,7 +224,7 @@ async function queryKClosestPair() {
       data: { time, result: r },
     });
   }
-  console.timeEnd('Query K Closest Pair');
+  console.timeEnd('Query All K Closest Pair');
 }
 
 export async function runAllMySQL() {
@@ -245,5 +245,5 @@ export async function runAllMySQL() {
 // );
 // console.table(result[0]);
 
-// await runAllMySQL();
+await runAllMySQL();
 // await client.close();
