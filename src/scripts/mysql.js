@@ -1,5 +1,5 @@
 import MysqlConnection from '../connections/MysqllConnection.js';
-import { ks, node_pairs, radius } from '../utils/params.js';
+import { ks, node_pairs, radius, tagClosestPair } from '../utils/params.js';
 import FileHandler, { dirQueries } from '../utils/FileHandler.js';
 // r = {
 //   time: 0,
@@ -15,6 +15,8 @@ const client = new MysqlConnection({
   user: 'root',
   password: 'root',
 });
+// await client.connect();
+// await client.query('SELECT NOW();');
 
 const queries = {
   distance: ({ node1, node2 }) =>
@@ -54,53 +56,26 @@ const queries = {
     `FROM nodes n WHERE n.node_id != ${node1} ` +
     `ORDER BY distance LIMIT ${k};`,
 
-  shortestPath: ({ node1: source_node_id, node2: target_node_id }) => {
-    return {
-      createTemporaryCostTable:
-        'CREATE TEMPORARY TABLE costs (node_id BIGINT PRIMARY KEY, cost INT);',
-      createTemporaryVisitedTable:
-        'CREATE TEMPORARY TABLE visited (node_id BIGINT PRIMARY KEY, visited BOOLEAN);',
-      defineSourceNode: `INSERT INTO costs (node_id, cost) SELECT node_id, CASE WHEN node_id = ${source_node_id} THEN 0 ELSE 999999 END FROM nodes;`,
-      defineVisited: `INSERT INTO visited (node_id, visited) SELECT node_id, FALSE FROM nodes;`,
-      loopAlgorithm:
-        'WHILE (SELECT COUNT(*) FROM visited WHERE visited = FALSE) > 0 DO ' +
-        'SET @current_node_id = (SELECT node_id FROM costs WHERE visited = FALSE ORDER BY cost LIMIT 1);' +
-        'UPDATE visited SET visited = TRUE WHERE node_id = @current_node_id; ' +
-        'UPDATE costs AS c ' +
-        'JOIN way_nodes AS wn ON c.node_id = wn.node_id ' +
-        'JOIN way_nodes AS wn2 ON wn.way_id = wn2.way_id AND wn2.node_id != wn.node_id ' +
-        'JOIN nodes AS n ON wn2.node_id = n.node_id ' +
-        'SET c.cost = LEAST(c.cost, (SELECT cost FROM costs WHERE node_id = @current_node_id) + 1) ' +
-        'WHERE c.node_id = n.node_id AND visited = FALSE; ' +
-        ` IF @current_node_id = ${target_node_id} THEN LEAVE;` +
-        'END IF; ' +
-        'END WHILE;',
-    };
-  },
-  closestPair: ({ key, value }) => {
+  kClosestPair: ({ key, value, k }) =>
     'WITH tagged_nodes AS (' +
-      'SELECT node_id, location ' +
-      'FROM nodes ' +
-      'WHERE node_id IN (' +
-      'SELECT DISTINCT nt1.node_id ' +
-      'FROM node_tags nt1 ' +
-      `WHERE nt1.tag_key = '${key}' AND nt1.tag_value = '${value}' ` +
-      ')' +
-      ')' +
-      'SELECT ' +
-      'nt1.node_id AS node_id_1, ' +
-      'nt2.node_id AS node_id_2, ' +
-      'ST_Distance_Sphere(nt1.location, nt2.location) AS distance ' +
-      'FROM tagged_nodes nt1 ' +
-      'CROSS JOIN tagged_nodes nt2 ' +
-      'WHERE nt1.node_id != nt2.node_id ' +
-      'ORDER BY distance ASC ' +
-      'LIMIT 1; ';
-  },
+    'SELECT node_id, location ' +
+    'FROM nodes ' +
+    'WHERE node_id IN (' +
+    'SELECT DISTINCT nt1.node_id ' +
+    'FROM node_tags nt1 ' +
+    `WHERE nt1.tag_key = '${key}' AND nt1.tag_value = '${value}' ` +
+    ')' +
+    ')' +
+    'SELECT ' +
+    'nt1.node_id AS node_id1, ' +
+    'nt2.node_id AS node_id2, ' +
+    'ST_Distance_Sphere(nt1.location, nt2.location) AS distance ' +
+    'FROM tagged_nodes nt1 ' +
+    'CROSS JOIN tagged_nodes nt2 ' +
+    'WHERE nt1.node_id != nt2.node_id ' +
+    'ORDER BY distance ASC ' +
+    `LIMIT ${k};`,
 };
-
-await client.connect();
-await client.query('SELECT NOW();');
 
 // let {result} = await client.query('SELECT * FROM nodes ORDER BY RAND() LIMIT 40;');
 
@@ -109,9 +84,10 @@ async function queryDistance() {
   // let times = [];
   // let results = [];
   // let re = [];
+  console.time('Query Distance');
   for (let pair of node_pairs) {
     let { result, time } = await client.query(queries.distance(pair));
-    // let r = result[0][0].distance;
+    let r = result[0][0].distance;
     // re.push(r);
     let filename = fileHandler.distanceFileName(pair);
     fileHandler.writeOut({
@@ -120,15 +96,14 @@ async function queryDistance() {
       data: { time, result: r },
     });
   }
-  console.log(re.join('\n'));
-  // console.table({ mysql: times });
-  // console.table({ mysql: results });
+  console.timeEnd('Query Distance');
 }
 
 // await queryDistance();
 
 // // // // // // // // // // rrq
 async function queryRadiusRange() {
+  console.time('Query Radius Range');
   for (let pair of node_pairs) {
     for (let r of radius) {
       let { time, result } = await client.query(queries.radiusRange(pair, r));
@@ -140,12 +115,14 @@ async function queryRadiusRange() {
       });
     }
   }
+  console.timeEnd('Query Radius Range');
 }
 
 // // // // // // // // // // wrq
 async function queryWindowRange() {
   // let { result } = await client.query(queries.wrq(node_pairs[0]));
   // console.log(result);
+  console.time('Query Window Range');
   for (let pair of node_pairs) {
     let { time, result } = await client.query(queries.windowRange(pair));
     let filename = fileHandler.windowRQFileName(pair);
@@ -155,6 +132,7 @@ async function queryWindowRange() {
       data: { time, result: result[0].map(({ node_id }) => node_id) },
     });
   }
+  console.timeEnd('Query Window Range');
 }
 
 // await queryWindowRange();
@@ -166,7 +144,9 @@ async function queryRangeCount() {
   //   (await client.query(queries.windowRangeCount(node_pairs[0]))).result[0][0]
   //     .count
   // );
+  console.time('Query Range Count');
   for (let pair of node_pairs) {
+    // ////////////// window
     let { time, result } = await client.query(queries.windowRangeCount(pair));
     let filename = fileHandler.rangeCountFileName({
       ...pair,
@@ -178,6 +158,7 @@ async function queryRangeCount() {
       data: { time, result: result[0][0]['count'] },
     });
 
+    // ////////////// radius
     for (let r of radius) {
       let { time, result } = await client.query(
         queries.radiusRangeCount(pair, r)
@@ -194,13 +175,13 @@ async function queryRangeCount() {
       });
     }
   }
-  // console.table({ mysql: times });
-  // console.table({ mysql: results });
+  console.timeEnd('Query Range Count');
 }
 
 async function queryKNN() {
   // let times = [];
   // let results = [];
+  console.time('Query KNN');
   for (let pair of node_pairs) {
     for (let k of ks) {
       let { time, result } = await client.query(queries.knn(pair, k));
@@ -212,42 +193,57 @@ async function queryKNN() {
       });
     }
   }
+  console.timeEnd('Query KNN');
 }
 
-async function shortestPath() {
-  let shortestPath = queries.shortestPath(node_pairs[0]);
+async function queryKClosestPair() {
+  console.time('Query K Closest Pair');
+  for (let k of ks) {
+    let query = queries.kClosestPair({
+      ...tagClosestPair,
+      k: k * 2,
+    });
 
-  try {
-    let r1 = await client.query(shortestPath.createTemporaryCostTable);
-    console.log(r1);
-    let r2 = await client.query(shortestPath.createTemporaryVisitedTable);
-    console.log(r2);
-    let r3 = await client.query(shortestPath.defineSourceNode);
-    console.log(r3);
-    let r4 = await client.query(shortestPath.defineVisited);
-    console.log(r4);
-    let r5 = await client.query(shortestPath.loopAlgorithm);
-    console.log(r5);
-  } catch (error) {
-    console.error(error);
+    let { time, result } = await client.query(query);
+
+    let hashIds = new Set();
+
+    let filename = fileHandler.kClosestPairFileName({ k });
+
+    let r = result[0].filter(({ node_id1, node_id2 }) => {
+      if (hashIds.has(node_id1) || hashIds.has(node_id2)) {
+        return false;
+      }
+      hashIds.add([node_id1, node_id2]);
+      return true;
+    });
+
+    fileHandler.writeOut({
+      queryName: dirQueries.kClosestPair,
+      filename,
+      data: { time, result: r },
+    });
   }
+  console.timeEnd('Query K Closest Pair');
 }
 
-// await shortestPath();
-
-// async function runAll() {
-//   await queryDistance();
-//   await queryRadiusRange();
-//   await queryWindowRange();
-//   await queryRangeCount();
-//   await knn();
-// }
+export async function runAllMySQL() {
+  console.log('Running MySQL queries');
+  await client.connect();
+  await client.query('SELECT NOW();');
+  await queryDistance();
+  await queryRadiusRange();
+  await queryWindowRange();
+  await queryRangeCount();
+  await queryKNN();
+  await queryKClosestPair();
+  await client.close();
+}
 
 // let { result } = await client.query(
 //   'SELECT ST_Distance_Sphere(POINT(-74.0060, 40.7128), POINT(-118.2437, 34.0522)) AS distance;'
 // );
 // console.table(result[0]);
 
-// await runAll();
-
-await client.close();
+// await runAllMySQL();
+// await client.close();

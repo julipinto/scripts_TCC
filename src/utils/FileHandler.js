@@ -48,6 +48,10 @@ export default class FileHandler {
   knnFileName({ node1, k }) {
     return `knn_${node1}_k${k}.${this.FORMAT}`;
   }
+
+  kClosestPairFileName({ k }) {
+    return `kcp_k${k}.${this.FORMAT}`;
+  }
 }
 
 export const dirQueries = {
@@ -57,4 +61,5 @@ export const dirQueries = {
   window: 'windowRQ',
   radiusCount: 'radiusRQCount',
   windowCount: 'windowRQCount',
+  kClosestPair: 'kclosestpair',
 };
