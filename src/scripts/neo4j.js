@@ -3,8 +3,9 @@
 // RETURN point.distance(node2.location, node2.location) AS dist;
 
 import Neo4jConnection from '../connections/Neo4jConnection.js';
-import { ks, node_pairs, radius } from '../utils/params.js';
+import { ks, node_pairs, radius, tagClosestPair } from '../utils/params.js';
 import FileHandler, { dirQueries } from '../utils/FileHandler.js';
+import { removeDuplicates } from '../utils/removeKCPDuplucates.js';
 
 const fileHandler = new FileHandler('neo4j');
 
@@ -14,11 +15,7 @@ const client = new Neo4jConnection({
   password: 'root1234',
 });
 
-await client.connect();
-
-// match (node1 {id: 4662482749})
-// match (node2 {id: 7410560799})
-// return point.distance(node1.location, node2.location)
+// await client.connect();
 
 const queries = {
   // distance: ({ node1, node2 }) =>
@@ -30,16 +27,16 @@ const queries = {
     `MATCH (node2:POINT {id: ${node2}}) ` +
     'RETURN point.distance(node1.location, node2.location) AS distance;',
   radiusRange: ({ node1 }, radius) =>
-    `MATCH (node:POINT {id: ${node1}}) ` +
-    'MATCH (node2:POINT) ' +
-    `WHERE point.distance(node.location, node2.location) < ${radius} ` +
-    'RETURN node2;',
+    `MATCH (source:POINT {id: ${node1}}) ` +
+    'MATCH (target:POINT) ' +
+    `WHERE point.distance(source.location, target.location) < ${radius} ` +
+    'RETURN target;',
   windowRange: ({ node1, node2 }) =>
-    'MATCH (node1:POINT) ' +
-    `MATCH (b1:POINT {id: ${node1}}) ` +
-    `MATCH (b2:POINT {id: ${node2}}) ` +
-    'WHERE point.withinBBox(node1.location, b1.location, b2.location) OR point.withinBBox(node1.location, b2.location, b1.location) ' +
-    'RETURN node1;',
+    'MATCH (target:POINT) ' +
+    `MATCH (source1:POINT {id: ${node1}}) ` +
+    `MATCH (source2:POINT {id: ${node2}}) ` +
+    'WHERE point.withinBBox(target.location, source1.location, source2.location) ' +
+    'RETURN target;',
   radiusCount: ({ node1 }, radius) =>
     `MATCH (node:POINT {id: ${node1}}) ` +
     'MATCH (node2:POINT) ' +
@@ -51,42 +48,28 @@ const queries = {
     `MATCH (b2:POINT {id: ${node2}}) ` +
     'WHERE point.withinBBox(node1.location, b1.location, b2.location) ' +
     'RETURN count(node1) AS nodeCount;',
-  closestPair: ({ node1 }) =>
-    "MATCH (node1:POINT {power: 'tower'}) " +
-    "MATCH (node2:POINT {power: 'tower'}) " +
+  kClosestPair: ({ key, value, k }) =>
+    `MATCH (node1:POINT {${key}: '${value}'}) ` +
+    `MATCH (node2:POINT {${key}: '${value}'}) ` +
     'WHERE node1.id <> node2.id ' +
     'WITH node1, node2 ' +
     'ORDER BY point.distance(node1.location, node2.location) ' +
-    'LIMIT 1 ' +
-    'RETURN {node1: node1, node2: node2, distance: point.distance(b1.location, b2.location)}; ',
-  knn: ({ node1 }, k) =>
-    `MATCH (target:POINT {id: ${node1}}) ` +
-    'MATCH (other:POINT) ' +
-    'WHERE target.id <> other.id  ' +
-    'WITH target, other ' +
-    'ORDER BY point.distance(other.location, target.location) ' +
     `LIMIT ${k} ` +
-    'RETURN other, point.distance(other.location, target.location) AS distance; ',
+    'RETURN node1, node2, point.distance(node1.location, node2.location) AS distance; ',
+  // 'RETURN {node1: node1, node2: node2, distance: point.distance(node1.location, node2.location)}; ',
+  knn: ({ node1 }, k) =>
+    `MATCH (source:POINT {id: ${node1}}) ` +
+    'MATCH (target:POINT) ' +
+    'WHERE source.id <> target.id  ' +
+    'WITH source, target ' +
+    'ORDER BY point.distance(target.location, source.location) ' +
+    `LIMIT ${k} ` +
+    'RETURN target; ',
+  // 'RETURN target, point.distance(target.location, source.location) AS distance; ',
 };
 
-// MATCH (node1:POINT)
-// MATCH (b1:POINT {id: 4662482749})
-// MATCH (b2:POINT {id: 7410560799})
-// WHERE point.withinBBox(node1.location, b1.location, b2.location) OR point.withinBBox(node1.location, b2.location, b1.location)
-// RETURN node1;
-
-// MATCH (node1:POINT)
-// MATCH (b1:POINT {id: 4662482749})
-// MATCH (b2:POINT {id: 7410560799})
-// WHERE point.withinBBox(node1.location, b1.location, b2.location) OR point.withinBBox(node1.location, b2.location, b1.location)
-// RETURN count(node1) AS nodeCount;
-
 async function queryDistance() {
-  // console.log(node_pairs[0]);
-  // const query = queries.distance(node_pairs[0]);
-  // const { result } = await client.query(query);
-  // console.log(result.records.map((r) => r.get('distance'))[0]);
-  let f = [];
+  console.time('Query All Distance');
   for (const pair of node_pairs) {
     const query = queries.distance(pair);
     const { result, time } = await client.query(query);
@@ -97,22 +80,136 @@ async function queryDistance() {
       filename,
       data: { time, result: r },
     });
-    // f.push(r);
-    // distances.push();
   }
-
-  // await fileHandler.write(ks, distances);
+  console.timeEnd('Query All Distance');
 }
 
-// await queryDistance();
+async function queryRadiusRange() {
+  console.time('Query All Radius Range');
+  for (const pair of node_pairs) {
+    for (const r of radius) {
+      const query = queries.radiusRange(pair, r);
+      const { result, time } = await client.query(query);
+      let res = result.records.map((r) =>
+        r.get('target').properties.id.toNumber()
+      );
 
-async function teste() {
-  const { result } = await client.query(
-    'WITH point({longitude: 0, latitude: 0}) AS point1, point({longitude: 180, latitude: 0}) AS point2 RETURN point.distance(point1, point2) / pi() AS distance;'
-  );
-  console.log(result.records.map((r) => r.get('distance'))[0]);
+      let filename = fileHandler.radiusRQFileName({ ...pair, radius: r });
+      fileHandler.writeOut({
+        queryName: dirQueries.radius,
+        filename,
+        data: { time, result: res },
+      });
+    }
+  }
+  console.timeEnd('Query All Radius Range');
 }
 
-await teste();
+async function queryWindowRange() {
+  console.time('Query All Window Range');
+  for (const pair of node_pairs) {
+    const query = queries.windowRange(pair);
+    const { result, time } = await client.query(query);
+    let res = result.records.map((r) =>
+      r.get('target').properties.id.toNumber()
+    );
 
-await client.close();
+    let filename = fileHandler.windowRQFileName(pair);
+    fileHandler.writeOut({
+      queryName: dirQueries.window,
+      filename,
+      data: { time, result: res },
+    });
+  }
+  console.timeEnd('Query All Window Range');
+}
+
+async function queryRangeCount() {
+  console.time('Query All Radius Count');
+  for (const pair of node_pairs) {
+    let { time, result } = await client.query(queries.windowCount(pair));
+    let filename = fileHandler.rangeCountFileName({
+      ...pair,
+      type: dirQueries.windowCount,
+    });
+
+    fileHandler.writeOut({
+      queryName: dirQueries.windowCount,
+      filename,
+      data: { time, result: result.records[0].get('nodeCount').toNumber() },
+    });
+
+    for (const r of radius) {
+      let { time, result } = await client.query(queries.radiusCount(pair, r));
+      let filename = fileHandler.rangeCountFileName({
+        ...pair,
+        type: dirQueries.radiusCount,
+        radius: r,
+      });
+
+      fileHandler.writeOut({
+        queryName: dirQueries.radiusCount,
+        filename,
+        data: { time, result: result.records[0].get('nodeCount').toNumber() },
+      });
+    }
+  }
+  console.timeEnd('Query All Radius Count');
+}
+
+async function queryKNN() {
+  console.time('Query All KNN');
+  for (const pair of node_pairs) {
+    for (const k of ks) {
+      const query = queries.knn(pair, k);
+      let { time, result } = await client.query(query);
+      let res = result.records.map((r) =>
+        r.get('target').properties.id.toNumber()
+      );
+
+      let filename = fileHandler.knnFileName({ ...pair, k });
+      fileHandler.writeOut({
+        queryName: dirQueries.knn,
+        filename,
+        data: { time, result: res },
+      });
+    }
+  }
+  console.timeEnd('Query All KNN');
+}
+
+async function queryKClosestPair() {
+  console.time('Query All K Closest Pair');
+  for (const k of ks) {
+    const query = queries.kClosestPair({ ...tagClosestPair, k: k * 2 });
+    let { time, result } = await client.query(query);
+    let res = result.records.map((r) => ({
+      node_id1: r.get('node1').properties.id.toNumber(),
+      node_id2: r.get('node2').properties.id.toNumber(),
+      distance: r.get('distance'),
+    }));
+    let withoutDuplicates = removeDuplicates(res);
+    let filename = fileHandler.kClosestPairFileName({ k });
+    fileHandler.writeOut({
+      queryName: dirQueries.kClosestPair,
+      filename,
+      data: { time, result: withoutDuplicates },
+    });
+  }
+  console.timeEnd('Query All K Closest Pair');
+}
+
+export async function runAllNeo4j() {
+  console.log('Running Neo4j queries');
+  await client.connect();
+  await client.query('RETURN timestamp() AS currentTimestamp;');
+  await queryDistance();
+  await queryRadiusRange();
+  await queryWindowRange();
+  await queryRangeCount();
+  await queryKNN();
+  await queryKClosestPair();
+  await client.close();
+}
+
+await runAllNeo4j();

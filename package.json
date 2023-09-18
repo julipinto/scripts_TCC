@@ -9,7 +9,8 @@
     "db:mysql": "node src/scripts/mysql.js",
     "db:neo4j": "node src/scripts/neo4j.js",
     "db:mongo": "node src/scripts/mongodb.js",
-    "db:pg": "node src/scripts/postgres.js"
+    "db:pg": "node src/scripts/postgres.js",
+    "res": "node src/scripts/results.js"
   },
   "keywords": [],
   "author": "",
