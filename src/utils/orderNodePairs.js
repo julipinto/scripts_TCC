@@ -20,13 +20,13 @@ async function getLowerLeftTopRight(params) {
   let ordered = [];
 
   for (let { node1, node2 } of params) {
-    let { low: n1 } = (
-      await client.query(winRQ(node1, node2))
-    ).result.records.map((r) => r.get('count'))[0];
+    let n1 = (await client.query(winRQ(node1, node2))).result.records
+      .map((r) => r.get('count'))[0]
+      .toNumber();
 
-    let { low: n2 } = (
-      await client.query(winRQ(node2, node1))
-    ).result.records.map((r) => r.get('count'))[0];
+    let n2 = (await client.query(winRQ(node2, node1))).result.records
+      .map((r) => r.get('count'))[0]
+      .toNumber();
 
     if (n1 > n2) ordered.push({ node1, node2 });
     else if (n1 < n2) ordered.push({ node1: node2, node2: node1 });
