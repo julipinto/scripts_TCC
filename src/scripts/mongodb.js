@@ -1,6 +1,7 @@
 import MongodbConnection from '../connections/MongodbConnection.js';
 import { ks, node_pairs, radius, tagClosestPair } from '../utils/params.js';
 import FileHandler, { dirQueries } from '../utils/FileHandler.js';
+import { removeDuplicates } from '../utils/removeKCPDuplucates.js';
 import { round } from '../utils/calc.js';
 
 const fileHandler = new FileHandler('mongodb');
@@ -278,14 +279,16 @@ async function queryKClosestPair() {
   for (let k of ks) {
     const start = performance.now();
 
+    const { key, value } = tagClosestPair;
+
     const result = await client.nodes_collection
       .aggregate([
-        { $match: { [tagClosestPair.key]: tagClosestPair.value } },
+        { $match: { [key]: value } },
         {
           $lookup: {
             from: 'nodes',
             as: 'closestNode',
-            let: { coords: '$location.coordinates' },
+            let: { coords: '$location.coordinates', prev_id: '$_id' },
             pipeline: [
               {
                 $geoNear: {
@@ -295,35 +298,26 @@ async function queryKClosestPair() {
                   },
                   distanceField: 'distFromMe',
                   spherical: true,
-                  query: { [tagClosestPair.key]: tagClosestPair.value },
+                  query: { [key]: value },
                 },
               },
-              { $skip: 1 },
-              { $limit: 1 },
+              { $match: { distFromMe: { $gt: 0 } } },
             ],
           },
         },
-        { $set: { closestNode: { $first: '$closestNode' } } },
+        { $unwind: '$closestNode' },
         { $sort: { 'closestNode.distFromMe': 1 } },
         { $limit: k * 2 },
       ])
       .toArray();
 
-    let map_r = result.map((r) => ({
+    let res = result.map((r) => ({
       node_id1: r._id,
       node_id2: r.closestNode._id,
       distance: r.closestNode.distFromMe,
     }));
 
-    let hashIds = new Set();
-
-    let r = map_r.filter(({ node_id1, node_id2 }) => {
-      if (hashIds.has(node_id1) || hashIds.has(node_id2)) {
-        return false;
-      }
-      hashIds.add([node_id1, node_id2]);
-      return true;
-    });
+    let withoutDuplicates = removeDuplicates(res);
 
     let filename = fileHandler.kClosestPairFileName({
       k,
@@ -334,22 +328,16 @@ async function queryKClosestPair() {
       filename,
       data: {
         time: round(performance.now() - start),
-        result: r,
+        result: withoutDuplicates,
       },
     });
   }
-
   console.timeEnd('Query All K Closest Pair');
 }
-
-// await queryKClosestPair();
-
-// await client.close();
 
 export async function runAllMongodb() {
   console.log('Running MongoDB queries');
   await client.connect();
-  // await client.query('SELECT NOW();');
   await fetchNodes();
 
   await queryDistance();
@@ -361,4 +349,4 @@ export async function runAllMongodb() {
   await client.close();
 }
 
-// await runAllMongodb();
+await runAllMongodb();

@@ -212,4 +212,4 @@ export async function runAllNeo4j() {
   await client.close();
 }
 
-await runAllNeo4j();
+// await runAllNeo4j();

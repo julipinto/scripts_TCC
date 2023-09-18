@@ -1,6 +1,7 @@
 import PostgresConnection from '../connections/PostgresConnection.js';
 import { ks, node_pairs, radius, tagClosestPair } from '../utils/params.js';
 import FileHandler, { dirQueries } from '../utils/FileHandler.js';
+import { removeDuplicates } from '../utils/removeKCPDuplucates.js';
 
 const fileHandler = new FileHandler('postgres');
 
@@ -196,25 +197,13 @@ async function queryKClosestPair() {
     });
 
     let { time, result } = await client.query(query);
-    // console.log(result.rows);
-    // break;
-
-    let hashIds = new Set();
-
+    let withoutDuplicates = removeDuplicates(result.rows);
     let filename = fileHandler.kClosestPairFileName({ k });
-
-    let r = result.rows.filter(({ node_id1, node_id2 }) => {
-      if (hashIds.has(node_id1) || hashIds.has(node_id2)) {
-        return false;
-      }
-      hashIds.add([node_id1, node_id2]);
-      return true;
-    });
 
     fileHandler.writeOut({
       queryName: dirQueries.kClosestPair,
       filename,
-      data: { time, result: r },
+      data: { time, result: withoutDuplicates },
     });
   }
   console.timeEnd('Query All K Closest Pair');
