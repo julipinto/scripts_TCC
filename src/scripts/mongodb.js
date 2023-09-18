@@ -349,4 +349,4 @@ export async function runAllMongodb() {
   await client.close();
 }
 
-await runAllMongodb();
+// await runAllMongodb();

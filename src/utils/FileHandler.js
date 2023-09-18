@@ -1,5 +1,6 @@
 import { join, resolve } from 'path';
 import { createWriteStream, existsSync, mkdirSync } from 'fs';
+import { readFile } from 'fs/promises';
 
 export default class FileHandler {
   constructor(database) {
@@ -51,6 +52,15 @@ export default class FileHandler {
 
   kClosestPairFileName({ k }) {
     return `kcp_k${k}.${this.FORMAT}`;
+  }
+
+  readIn({ filename, queryName }) {
+    return readFile(
+      resolve(join('out', this.database, queryName, filename)),
+      'utf8'
+    ).then((data) => {
+      return JSON.parse(data);
+    });
   }
 }
 

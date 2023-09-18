@@ -23,7 +23,7 @@ const client = new MysqlConnection({
 const queries = {
   distance: ({ node1, node2 }) =>
     'SELECT ' +
-    'ST_Distance_Sphere(' +
+    'ST_Distance(' +
     `(SELECT location FROM nodes WHERE node_id = ${node1}),` +
     `(SELECT location FROM nodes WHERE node_id = ${node2})` +
     ') AS distance;',
