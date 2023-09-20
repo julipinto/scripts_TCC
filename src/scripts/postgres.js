@@ -11,6 +11,8 @@ const client = new PostgresConnection({
   password: 'root',
 });
 
+const SRID = 0;
+
 const queries = {
   distance: ({ node1, node2 }) => `SELECT
     n1.node_id AS source_node_id,
@@ -31,7 +33,7 @@ const queries = {
         (SELECT location FROM nodes WHERE node_id = ${node1}) AS p1,
         (SELECT location FROM nodes WHERE node_id = ${node2}) AS p2
     ) AS envelope ON
-    ST_Contains(ST_MakeEnvelope(ST_X(envelope.p1), ST_Y(envelope.p1), ST_X(envelope.p2), ST_Y(envelope.p2), 4326)::geometry, n.location::geometry);`,
+    ST_Contains(ST_MakeEnvelope(ST_X(envelope.p1), ST_Y(envelope.p1), ST_X(envelope.p2), ST_Y(envelope.p2), ${SRID})::geometry, n.location::geometry);`,
 
   radiusRangeCount: ({ node1 }, radius) => `SELECT COUNT(*) AS count
     FROM nodes n
@@ -44,7 +46,7 @@ const queries = {
         (SELECT location FROM nodes WHERE node_id = ${node1}) AS p1,
         (SELECT location FROM nodes WHERE node_id = ${node2}) AS p2
     ) AS envelope ON
-    ST_Contains(ST_MakeEnvelope(ST_X(envelope.p1), ST_Y(envelope.p1), ST_X(envelope.p2), ST_Y(envelope.p2), 4326)::geometry, n.location::geometry);`,
+    ST_Contains(ST_MakeEnvelope(ST_X(envelope.p1), ST_Y(envelope.p1), ST_X(envelope.p2), ST_Y(envelope.p2), ${SRID})::geometry, n.location::geometry);`,
 
   knn: ({ node1 }, k) => `SELECT
     target_node.node_id AS target_id,
