@@ -10,16 +10,22 @@
     "db:neo4j": "node src/scripts/neo4j.js",
     "db:mongo": "node src/scripts/mongodb.js",
     "db:pg": "node src/scripts/postgres.js",
-    "res": "node src/scripts/results.js"
+    "res": "node src/scripts/results.js",
+    "geojson": "node src/scripts/toGeoJSON.js",
+    "form:time": "node src/scripts/plottime.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "circle-to-polygon": "^2.2.0",
     "mongodb": "^5.8.1",
     "mysql2": "^3.6.0",
     "neo4j-driver": "^5.11.0",
     "ora": "^7.0.1",
     "pg": "^8.11.3"
+  },
+  "devDependencies": {
+    "eslint": "^8.49.0"
   }
 }

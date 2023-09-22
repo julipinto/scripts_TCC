@@ -6,8 +6,9 @@ import { runAllNeo4j } from './neo4j.js';
 
 import FileHandler, { dirQueries } from '../utils/FileHandler.js';
 import { node_pairs, ks, radius } from '../utils/params.js';
+import { exit } from 'process';
 
-async function runAll() {
+export async function runAll() {
   await runAllMySQL();
   console.log('');
   await runAllPostgres();
@@ -17,19 +18,27 @@ async function runAll() {
   await runAllNeo4j();
 }
 
-async function readDirs() {
-  return await readdir('./out');
-}
+// export async function readDirs() {
+//   return await readdir('./out');
+// }
 
-function mapFileHandlers(dirs) {
+// function mapFileHandlers(dirs) {
+//   return dirs.map((dir) => {
+//     return new FileHandler(dir);
+//   });
+// }
+
+export async function availbleFileHandlers() {
+  let dirs = await readdir('./out');
+  if (dirs.length === 0) throw new Error('No files found in ./out');
+
   return dirs.map((dir) => {
     return new FileHandler(dir);
   });
 }
 
-async function getDistanceResults() {
-  let dirs = await readDirs();
-  let fileHandlers = mapFileHandlers(dirs);
+export async function getDistanceResults() {
+  let fileHandlers = await availbleFileHandlers();
   let timestemps = {};
   let results = {};
 
@@ -49,14 +58,13 @@ async function getDistanceResults() {
     }
   }
 
-  console.log({ timestemps: timestemps });
-  console.log({ results });
-  return { timestemps: timestemps, results };
+  // console.log({ timestemps: timestemps });
+  // console.log({ results });
+  return { timestemps, results };
 }
 
-async function getRadiusResults() {
-  let dirs = await readDirs();
-  let fileHandlers = mapFileHandlers(dirs);
+export async function getRadiusResults() {
+  let fileHandlers = await availbleFileHandlers();
   let timestemps = {};
   let results = {};
 
@@ -78,13 +86,14 @@ async function getRadiusResults() {
   }
 
   console.log({ timestemps });
-  console.log({ results });
+  // console.log({ results });
   return { timestemps, results };
 }
 
-async function getWindowResults() {
-  let dirs = await readDirs();
-  let fileHandlers = mapFileHandlers(dirs);
+await getRadiusResults();
+
+export async function getWindowResults() {
+  let fileHandlers = await availbleFileHandlers();
   let timestemps = {};
   let results = {};
 
@@ -103,14 +112,14 @@ async function getWindowResults() {
     }
   }
 
-  console.log({ timestemps });
-  console.log({ results });
+  // console.log({ timestemps });
+  // console.log({ results });
+  // console.log(results['windowRQ_7410560799_4662482749.json']['mongodb']);
   return { timestemps, results };
 }
 
-async function getRangeCountResults() {
-  let dirs = await readDirs();
-  let fileHandlers = mapFileHandlers(dirs);
+export async function getRangeCountResults() {
+  let fileHandlers = await availbleFileHandlers();
 
   let timestempsWindow = {};
   let resultsWindow = {};
@@ -158,16 +167,15 @@ async function getRangeCountResults() {
     // break;
   }
 
-  console.log({ timestempsWindow });
+  // console.log({ timestempsWindow });
   // console.log({ resultsWindow });
   // console.log({ timestempsRadius });
   // console.log({ resultsRadius });
   return { timestempsWindow, resultsWindow, timestempsRadius, resultsRadius };
 }
 
-async function getKNNResults() {
-  let dirs = await readDirs();
-  let fileHandlers = mapFileHandlers(dirs);
+export async function getKNNResults() {
+  let fileHandlers = await availbleFileHandlers();
   let timestemps = {};
   let results = {};
 
@@ -189,25 +197,27 @@ async function getKNNResults() {
     }
   }
 
-  console.log({ timestemps });
-  console.log({ results });
+  // console.log({ timestemps });
+  // console.log({ results });
   return { timestemps, results };
 }
 
-async function getKClosestPairs() {
-  let dirs = await readDirs();
-  let fileHandlers = mapFileHandlers(dirs);
+export async function getKClosestPairs() {
+  let fileHandlers = await availbleFileHandlers();
   let timestemps = {};
   let results = {};
 
+  // console.log(fileHandlers);
+
   for (let k of ks) {
     for (let fileHandler of fileHandlers) {
-      let filename = fileHandler.kClosestPairsFileName(k);
+      // let filename = fileHandler.kClosestPairsFileName({ k });
+      let filename = fileHandler.kClosestPairFileName({ k });
       if (!timestemps[filename]) timestemps[filename] = {};
       if (!results[filename]) results[filename] = {};
 
       let { time, result } = await fileHandler.readIn({
-        queryName: dirQueries.kClosestPairs,
+        queryName: dirQueries.kClosestPair,
         filename,
       });
 
@@ -216,8 +226,10 @@ async function getKClosestPairs() {
     }
   }
 
-  console.log({ timestemps });
-  console.log({ results });
+  // exit(0);
+
+  // console.log({ timestemps });
+  // console.log({ results });
   return { timestemps, results };
 }
 
@@ -229,4 +241,6 @@ async function getKClosestPairs() {
 // await getDistanceResults();
 // await getRadiusResults();
 // await getWindowResults();
-await getRangeCountResults();
+// await getRangeCountResults();
+// await getKNNResults();
+// await getKClosestPairs();
