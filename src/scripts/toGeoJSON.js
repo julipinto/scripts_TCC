@@ -69,13 +69,8 @@ async function writeGeoJSON({ dir, file, geoJSON }) {
 }
 
 async function getWindowResultsGeoJSON() {
-  // let id = 'windowRQ_7410560799_4662482749.json';
-
   let { results: rwin } = await getWindowResults();
-  // console.log(results);
-  for (let [k, results] of Object.entries(rwin)) {
-    let key = k.split('.')[0];
-    // get the box points
+  for (let [key, results] of Object.entries(rwin)) {
     let [_, pid1, pid2] = key.split('_');
 
     let {
@@ -108,7 +103,7 @@ async function getWindowResultsGeoJSON() {
       };
 
       let dir = `${root}/${dirQueries.window}/${key}`;
-      let file = `${dir}/${database}_${k}`;
+      let file = `${dir}/${database}_${key}`;
       await writeGeoJSON({ dir, file, geoJSON });
     }
   }
@@ -116,74 +111,71 @@ async function getWindowResultsGeoJSON() {
 
 async function allRadiusResultsGeoJSON() {
   let { results: rrad } = await getRadiusResults();
-  // console.log(rrad);
-  for (let [k, results] of Object.entries(rrad)) {
-    let key = k.split('.')[0];
-    let [_, pid, r] = key.split('_');
-    let radius = parseInt(r.replace('r', ''));
-
+  console.log(rrad);
+  for (let [key, key_results] of Object.entries(rrad)) {
     let {
       location: { coordinates: p },
-    } = await client.nodes_collection.findOne({ _id: parseInt(pid) });
+    } = await client.nodes_collection.findOne({ _id: parseInt(key) });
 
-    for (let [database, result] of Object.entries(results)) {
-      let features = await mapFeatures({ ids: result, highlight: [pid] });
-      let circle = drawCircle(p, radius, 32);
+    for (let [r, databases] of Object.entries(key_results)) {
+      for (let [database, result] of Object.entries(databases)) {
+        let features = await mapFeatures({ ids: result, highlight: [key] });
+        let circle = drawCircle(p, parseInt(r.replace('r', '')), 32);
 
-      let geoJSON = {
-        type: 'FeatureCollection',
-        features: [
-          ...features,
-          {
-            type: 'Feature',
-            geometry: {
-              type: 'Polygon',
-              coordinates: circle.coordinates,
+        let geoJSON = {
+          type: 'FeatureCollection',
+          features: [
+            ...features,
+            {
+              type: 'Feature',
+              geometry: {
+                type: 'Polygon',
+                coordinates: circle.coordinates,
+              },
+              properties: { id: 'radius' },
             },
-            properties: { id: 'radius' },
-          },
-        ],
-      };
+          ],
+        };
 
-      let dir = `${root}/${dirQueries.radius}/${pid}/${r}`;
-      let file = `${dir}/${database}_${k}`;
-      await writeGeoJSON({ dir, file, geoJSON });
+        let dir = `${root}/${dirQueries.radius}/${key}/${r}`;
+        let file = `${dir}/${database}_${key}`;
+        await writeGeoJSON({ dir, file, geoJSON });
+      }
     }
   }
 }
 
 async function allKNNResultsGeoJSON() {
   let { results: rKNN } = await getKNNResults();
-  for (let [file_name, results] of Object.entries(rKNN)) {
-    let key = file_name.split('.')[0];
-    let [_, pid, kk] = key.split('_');
-    let k = parseInt(kk.replace('k', ''));
-
+  // console.log(rKNN);
+  for (let [key, results] of Object.entries(rKNN)) {
     let {
       location: { coordinates: p },
-    } = await client.nodes_collection.findOne({ _id: parseInt(pid) });
+    } = await client.nodes_collection.findOne({ _id: parseInt(key) });
 
-    for (let [database, result] of Object.entries(results)) {
-      let features = await mapFeatures({ ids: result, highlight: [pid] });
+    for (let [k, databases] of Object.entries(results)) {
+      for (let [database, result] of Object.entries(databases)) {
+        let features = await mapFeatures({ ids: result, highlight: [key] });
 
-      let geoJSON = {
-        type: 'FeatureCollection',
-        features: [
-          ...features,
-          {
-            type: 'Feature',
-            geometry: {
-              type: 'Point',
-              coordinates: p,
+        let geoJSON = {
+          type: 'FeatureCollection',
+          features: [
+            ...features,
+            {
+              type: 'Feature',
+              geometry: {
+                type: 'Point',
+                coordinates: p,
+              },
+              properties: { id: 'source', 'marker-color': '#ff0000' },
             },
-            properties: { id: 'source', 'marker-color': '#ff0000' },
-          },
-        ],
-      };
+          ],
+        };
 
-      let dir = `${root}/${dirQueries.knn}/${pid}/${k}`;
-      let file = `${dir}/${database}_${file_name}`;
-      await writeGeoJSON({ dir, file, geoJSON });
+        let dir = `${root}/${dirQueries.knn}/${key}/${k}`;
+        let file = `${dir}/${database}_${key}`;
+        await writeGeoJSON({ dir, file, geoJSON });
+      }
     }
   }
 }
@@ -191,13 +183,7 @@ async function allKNNResultsGeoJSON() {
 async function allKClosestPairsGeoJSON() {
   let { results: rKCP } = await getKClosestPairs();
 
-  for (let [fileName, results] of Object.entries(rKCP)) {
-    let key = fileName.split('.')[0];
-    let [_, kkey] = key.split('_');
-    let k = parseInt(kkey.replace('k', ''));
-
-    // console.log(results);
-
+  for (let [key, results] of Object.entries(rKCP)) {
     for (let [database, result] of Object.entries(results)) {
       let features = [];
 
@@ -245,35 +231,19 @@ async function allKClosestPairsGeoJSON() {
         type: 'FeatureCollection',
         features,
       };
-      let dir = `${root}/${dirQueries.kClosestPair}/${k}`;
-      let file = `${dir}/${database}_${fileName}`;
+      let dir = `${root}/${dirQueries.kClosestPair}/${key}`;
+      let file = `${dir}/${database}_${key}`;
       await writeGeoJSON({ dir, file, geoJSON });
     }
   }
 }
-
-// let geoJSON = {
-// type: 'FeatureCollection',
-// features,
-//         geometry: {
-//           type: 'Point',
-//           coordinates: p,
-//         },
-//         properties: { id: 'source', 'marker-color': '#ff0000' },
-//       },
-
-// };
-//   let dir = `${root}/${dirQueries.kClosestPair}/${pid}/${k}`;
-//   let file = `${dir}/${database}_${fileName}`;
-//   await writeGeoJSON({ dir, file, geoJSON });
-// }
 
 async function allResultsGeoJSON() {
   await client.connect();
   // await getWindowResultsGeoJSON();
   // await allRadiusResultsGeoJSON();
   // await allKNNResultsGeoJSON();
-  await allKClosestPairsGeoJSON();
+  // await allKClosestPairsGeoJSON();
 
   await client.close();
 }
