@@ -227,7 +227,7 @@ export async function getKNNResults() {
   return { timestemps, results };
 }
 
-await getKNNResults();
+// await getKNNResults();
 
 export async function getKClosestPairs() {
   let fileHandlers = await availbleFileHandlers();
@@ -263,7 +263,7 @@ export async function getKClosestPairs() {
   return { timestemps, results };
 }
 
-await getKClosestPairs();
+// await getKClosestPairs();
 
 // await runAll();
 // await runAllMySQL();
@@ -276,3 +276,4 @@ await getKClosestPairs();
 // await getRangeCountResults();
 // await getKNNResults();
 // await getKClosestPairs();
+console.log(await getKClosestPairs());

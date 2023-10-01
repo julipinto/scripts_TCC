@@ -30,11 +30,15 @@ const queries = {
 
   radiusRange: ({ node1 }, radius) =>
     'SELECT node_id, location FROM nodes ' +
+    'JOIN node_tags nt ON n.node_id = nt.node_id ' +
     'WHERE ST_Distance_Sphere(location, ' +
-    `(SELECT location FROM nodes WHERE node_id = ${node1})) <= ${radius};`,
-  windowRange: ({ node1, node2 }) =>
+    `(SELECT location FROM nodes WHERE node_id = ${node1})) <= ${radius} ` +
+    `AND nt.tag_key = 'amenity' or nt.tag_value = 'store' `,
+  windowRange: ({ node1, node2 }, { tag_key, tag_value }) =>
     'SELECT n.node_id, n.location FROM nodes n ' +
-    `WHERE ST_X(n.location) >= LEAST((SELECT ST_X(location) FROM nodes WHERE node_id = ${node1}), (SELECT ST_X(location) FROM nodes WHERE node_id = ${node2})) ` +
+    'JOIN node_tags nt ON n.node_id = nt.node_id ' +
+    `WHERE nt.tag_key = 'amenity' or nt.tag_value = 'store' ` +
+    `AND ST_X(n.location) >= LEAST((SELECT ST_X(location) FROM nodes WHERE node_id = ${node1}), (SELECT ST_X(location) FROM nodes WHERE node_id = ${node2})) ` +
     `AND ST_X(n.location) <= GREATEST((SELECT ST_X(location) FROM nodes WHERE node_id = ${node1}), (SELECT ST_X(location) FROM nodes WHERE node_id = ${node2})) ` +
     `AND ST_Y(n.location) >= LEAST((SELECT ST_Y(location) FROM nodes WHERE node_id = ${node1}), (SELECT ST_Y(location) FROM nodes WHERE node_id = ${node2})) ` +
     `AND ST_Y(n.location) <= GREATEST((SELECT ST_Y(location) FROM nodes WHERE node_id = ${node1}), (SELECT ST_Y(location) FROM nodes WHERE node_id = ${node2})) ` +
@@ -125,8 +129,9 @@ async function queryWindowRange() {
   // let { result } = await client.query(queries.wrq(node_pairs[0]));
   // console.log(result);
   console.time('Query All Window Range');
+  let tag = { tag_key: 'amenity', tag_value: 'restaurant' };
   for (let pair of node_pairs) {
-    let { time, result } = await client.query(queries.windowRange(pair));
+    let { time, result } = await client.query(queries.windowRange(pair, tag));
     let filename = fileHandler.windowRQFileName(pair);
     fileHandler.writeOut({
       queryName: dirQueries.window,
@@ -225,12 +230,12 @@ export async function runAllMySQL() {
   console.log('Running MySQL queries');
   await client.connect();
   await client.query('SELECT NOW();');
-  await queryDistance();
-  await queryRadiusRange();
+  // await queryDistance();
+  // await queryRadiusRange();
   await queryWindowRange();
-  await queryRangeCount();
-  await queryKNN();
-  await queryKClosestPair();
+  // await queryRangeCount();
+  // await queryKNN();
+  // await queryKClosestPair();
   await client.close();
 }
 

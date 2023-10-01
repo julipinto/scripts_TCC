@@ -8,7 +8,6 @@ import {
   getKNNResults,
   getKClosestPairs,
 } from './results.js';
-
 import drawCircle from 'circle-to-polygon';
 
 const randomColors = [
@@ -111,7 +110,7 @@ async function getWindowResultsGeoJSON() {
 
 async function allRadiusResultsGeoJSON() {
   let { results: rrad } = await getRadiusResults();
-  console.log(rrad);
+  // console.log(rrad);
   for (let [key, key_results] of Object.entries(rrad)) {
     let {
       location: { coordinates: p },
@@ -240,7 +239,7 @@ async function allKClosestPairsGeoJSON() {
 
 async function allResultsGeoJSON() {
   await client.connect();
-  // await getWindowResultsGeoJSON();
+  await getWindowResultsGeoJSON();
   // await allRadiusResultsGeoJSON();
   // await allKNNResultsGeoJSON();
   // await allKClosestPairsGeoJSON();

@@ -10,6 +10,7 @@
     "db:neo4j": "node src/scripts/neo4j.js",
     "db:mongo": "node src/scripts/mongodb.js",
     "db:pg": "node src/scripts/postgres.js",
+    "db:sur": "node src/scripts/surrealdb.js",
     "res": "node src/scripts/results.js",
     "geojson": "node src/scripts/toGeoJSON.js",
     "form:time": "node src/scripts/plottime.js"
@@ -23,7 +24,8 @@
     "mysql2": "^3.6.0",
     "neo4j-driver": "^5.11.0",
     "ora": "^7.0.1",
-    "pg": "^8.11.3"
+    "pg": "^8.11.3",
+    "surrealdb.js": "^0.9.0"
   },
   "devDependencies": {
     "eslint": "^8.49.0"

@@ -140,3 +140,32 @@ WHERE w.way_id IN (
     JOIN node_tags nt ON wn.node_id = nt.node_id
     WHERE nt.tag_key = 'power' AND nt.tag_value = 'tower'
 );
+
+
+-- @block
+SELECT DISTINCT tag_key, tag_value
+FROM node_tags;
+
+-- @block
+SELECT COUNT(*) FROM node_tags WHERE tag_key = 'shop' AND tag_value = 'supermarket';
+
+-- @block
+SELECT tag_key, tag_value, COUNT(*) AS count
+FROM node_tags
+WHERE tag_key = 'shop'
+GROUP BY tag_key, tag_value
+ORDER BY count DESC;
+
+-- @block 
+SELECT tag_key, tag_value, COUNT(*) AS count
+FROM node_tags
+WHERE tag_value LIKE '%restaurant%'
+GROUP BY tag_key, tag_value
+ORDER BY count DESC;
+
+-- @block 
+SELECT tag_key, tag_value, COUNT(*) AS count
+FROM node_tags
+WHERE tag_key LIKE 'amenity'
+GROUP BY tag_key, tag_value
+ORDER BY count DESC;
