@@ -27,13 +27,13 @@ const queries = {
   radiusRange: ({ node1 }, radius) => `SELECT n.node_id, n.location
   FROM nodes n
   JOIN node_tags nt ON n.node_id = nt.node_id
-  WHERE (nt.tag_key = 'amenity' OR nt.tag_key = 'store')
+  WHERE (nt.tag_key = 'amenity' OR nt.tag_key = 'shop')
   AND ST_DWithin(n.location, (SELECT location FROM nodes WHERE node_id = ${node1}), ${radius}, true);`,
 
   windowRange: ({ node1, node2 }) => `SELECT n.node_id,  n.location
     FROM nodes n
     JOIN node_tags nt ON n.node_id = nt.node_id
-    WHERE (nt.tag_key = 'amenity' OR nt.tag_key = 'store')
+    WHERE (nt.tag_key = 'shop' OR nt.tag_key = 'amenity')
     AND ST_Within(
       n.location,
       ST_MakeEnvelope(
@@ -47,13 +47,13 @@ const queries = {
   radiusRangeCount: ({ node1 }, radius) => `SELECT COUNT(*) AS count
     FROM nodes n
     JOIN node_tags nt ON n.node_id = nt.node_id
-    WHERE (nt.tag_key = 'amenity' OR nt.tag_key = 'store')
+    WHERE (nt.tag_key = 'amenity' OR nt.tag_key = 'shop')
     AND ST_DWithin(n.location, (SELECT location FROM nodes WHERE node_id = ${node1}), ${radius}, true);`,
 
   windowRangeCount: ({ node1, node2 }) => `SELECT COUNT(*) AS count
     FROM nodes n
     JOIN node_tags nt ON n.node_id = nt.node_id
-    WHERE (nt.tag_key = 'amenity' OR nt.tag_key = 'store')
+    WHERE (nt.tag_key = 'amenity' OR nt.tag_key = 'shop')
     AND ST_Within(
       n.location,
       ST_MakeEnvelope(
@@ -247,7 +247,7 @@ export async function runAllPostgres() {
   // await queryRadiusRange();
   // await queryWindowRange();
   // await queryRangeCount();
-  // await queryKNN();
+  await queryKNN();
   // await queryKClosestPair();
   await client.close();
 }

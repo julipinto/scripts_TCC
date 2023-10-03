@@ -29,24 +29,28 @@ const queries = {
   radiusRange: ({ node1 }, radius) =>
     `MATCH (source:POINT {id: ${node1}}) ` +
     'MATCH (target:POINT) ' +
-    `WHERE point.distance(source.location, target.location) < ${radius} ` +
+    'WHERE (target.shop IS NOT NULL OR target.amenity IS NOT NULL) ' +
+    `AND point.distance(source.location, target.location) < ${radius} ` +
     'RETURN target;',
   windowRange: ({ node1, node2 }) =>
     'MATCH (target:POINT) ' +
     `MATCH (source1:POINT {id: ${node1}}) ` +
     `MATCH (source2:POINT {id: ${node2}}) ` +
-    'WHERE point.withinBBox(target.location, source1.location, source2.location) ' +
+    'WHERE (target.shop IS NOT NULL OR target.amenity IS NOT NULL) ' +
+    'AND point.withinBBox(target.location, source1.location, source2.location) ' +
     'RETURN target;',
   radiusCount: ({ node1 }, radius) =>
-    `MATCH (node:POINT {id: ${node1}}) ` +
-    'MATCH (node2:POINT) ' +
-    `WHERE point.distance(node.location, node2.location) < ${radius} ` +
+    `MATCH (source:POINT {id: ${node1}}) ` +
+    'MATCH (target:POINT) ' +
+    'WHERE (target.shop IS NOT NULL OR target.amenity IS NOT NULL) ' +
+    `AND point.distance(source.location, target.location) < ${radius} ` +
     'RETURN count(node2) AS nodeCount;',
   windowCount: ({ node1, node2 }) =>
     'MATCH (node1:POINT) ' +
     `MATCH (b1:POINT {id: ${node1}}) ` +
     `MATCH (b2:POINT {id: ${node2}}) ` +
-    'WHERE point.withinBBox(node1.location, b1.location, b2.location) ' +
+    'WHERE (target.shop IS NOT NULL OR target.amenity IS NOT NULL) ' +
+    'AND point.withinBBox(target.location, source1.location, source2.location) ' +
     'RETURN count(node1) AS nodeCount;',
   kClosestPair: ({ key, value, k }) =>
     `MATCH (node1:POINT {${key}: '${value}'}) ` +
@@ -59,7 +63,7 @@ const queries = {
   // 'RETURN {node1: node1, node2: node2, distance: point.distance(node1.location, node2.location)}; ',
   knn: ({ node1 }, k) =>
     `MATCH (source:POINT {id: ${node1}}) ` +
-    'MATCH (target:POINT) ' +
+    "MATCH (target:POINT {amenity: 'restaurant'}) " +
     'WHERE source.id <> target.id  ' +
     'WITH source, target ' +
     'ORDER BY point.distance(target.location, source.location) ' +
@@ -203,13 +207,13 @@ export async function runAllNeo4j() {
   console.log('Running Neo4j queries');
   await client.connect();
   await client.query('RETURN timestamp() AS currentTimestamp;');
-  await queryDistance();
-  await queryRadiusRange();
-  await queryWindowRange();
-  await queryRangeCount();
+  // await queryDistance();
+  // await queryRadiusRange();
+  // await queryWindowRange();
+  // await queryRangeCount();
   await queryKNN();
-  await queryKClosestPair();
+  // await queryKClosestPair();
   await client.close();
 }
 
-// await runAllNeo4j();
+await runAllNeo4j();

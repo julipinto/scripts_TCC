@@ -31,12 +31,12 @@ const queries = {
   radiusRange: ({ node1 }, radius) =>
     'SELECT n.node_id, n.location FROM nodes n ' +
     'JOIN node_tags nt ON n.node_id = nt.node_id ' +
-    `WHERE (nt.tag_key='amenity' OR nt.tag_key='store') ` +
+    `WHERE (nt.tag_key='amenity' OR nt.tag_key='shop') ` +
     `AND ST_Distance_Sphere(location, (SELECT location FROM nodes WHERE node_id = ${node1})) <= ${radius}; `,
   windowRange: ({ node1, node2 }, { tag_key, tag_value }) =>
     'SELECT n.node_id, n.location FROM nodes n ' +
     'JOIN node_tags nt ON n.node_id = nt.node_id ' +
-    `WHERE (nt.tag_key = 'amenity' OR nt.tag_key = 'store') ` +
+    `WHERE (nt.tag_key = 'amenity' OR nt.tag_key = 'shop') ` +
     `AND ST_X(n.location) >= LEAST((SELECT ST_X(location) FROM nodes WHERE node_id = ${node1}), (SELECT ST_X(location) FROM nodes WHERE node_id = ${node2})) ` +
     `AND ST_X(n.location) <= GREATEST((SELECT ST_X(location) FROM nodes WHERE node_id = ${node1}), (SELECT ST_X(location) FROM nodes WHERE node_id = ${node2})) ` +
     `AND ST_Y(n.location) >= LEAST((SELECT ST_Y(location) FROM nodes WHERE node_id = ${node1}), (SELECT ST_Y(location) FROM nodes WHERE node_id = ${node2})) ` +
@@ -46,12 +46,12 @@ const queries = {
   radiusRangeCount: ({ node1 }, radius) =>
     'SELECT COUNT(*) as count FROM nodes n ' +
     'JOIN node_tags nt ON n.node_id = nt.node_id ' +
-    `WHERE (nt.tag_key='amenity' OR nt.tag_key='store') ` +
+    `WHERE (nt.tag_key='amenity' OR nt.tag_key='shop') ` +
     `AND ST_Distance_Sphere(location, (SELECT location FROM nodes WHERE node_id = ${node1})) <= ${radius}; `,
   windowRangeCount: ({ node1, node2 }) =>
     'SELECT COUNT(*) AS count FROM nodes n ' +
     'JOIN node_tags nt ON n.node_id = nt.node_id ' +
-    `WHERE (nt.tag_key = 'amenity' OR nt.tag_key = 'store') ` +
+    `WHERE (nt.tag_key = 'amenity' OR nt.tag_key = 'shop') ` +
     `AND ST_X(n.location) >= LEAST((SELECT ST_X(location) FROM nodes WHERE node_id = ${node1}), (SELECT ST_X(location) FROM nodes WHERE node_id = ${node2})) ` +
     `AND ST_X(n.location) <= GREATEST((SELECT ST_X(location) FROM nodes WHERE node_id = ${node1}), (SELECT ST_X(location) FROM nodes WHERE node_id = ${node2})) ` +
     `AND ST_Y(n.location) >= LEAST((SELECT ST_Y(location) FROM nodes WHERE node_id = ${node1}), (SELECT ST_Y(location) FROM nodes WHERE node_id = ${node2})) ` +
@@ -234,10 +234,10 @@ export async function runAllMySQL() {
   await client.connect();
   await client.query('SELECT NOW();');
   // await queryDistance();
-  // await queryRadiusRange();
-  // await queryWindowRange();
+  await queryRadiusRange();
+  await queryWindowRange();
   // await queryRangeCount();
-  await queryKNN();
+  // await queryKNN();
   // await queryKClosestPair();
   await client.close();
 }
