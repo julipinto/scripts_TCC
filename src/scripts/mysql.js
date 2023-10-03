@@ -23,21 +23,20 @@ const client = new MysqlConnection({
 const queries = {
   distance: ({ node1, node2 }) =>
     'SELECT ' +
-    'ST_Distance(' +
+    'ST_Distance_Sphere(' +
     `(SELECT location FROM nodes WHERE node_id = ${node1}),` +
     `(SELECT location FROM nodes WHERE node_id = ${node2})` +
     ') AS distance;',
 
   radiusRange: ({ node1 }, radius) =>
-    'SELECT node_id, location FROM nodes ' +
+    'SELECT n.node_id, n.location FROM nodes n ' +
     'JOIN node_tags nt ON n.node_id = nt.node_id ' +
-    'WHERE ST_Distance_Sphere(location, ' +
-    `(SELECT location FROM nodes WHERE node_id = ${node1})) <= ${radius} ` +
-    `AND nt.tag_key = 'amenity' or nt.tag_value = 'store' `,
+    `WHERE (nt.tag_key='amenity' OR nt.tag_key='store') ` +
+    `AND ST_Distance_Sphere(location, (SELECT location FROM nodes WHERE node_id = ${node1})) <= ${radius}; `,
   windowRange: ({ node1, node2 }, { tag_key, tag_value }) =>
     'SELECT n.node_id, n.location FROM nodes n ' +
     'JOIN node_tags nt ON n.node_id = nt.node_id ' +
-    `WHERE nt.tag_key = 'amenity' or nt.tag_value = 'store' ` +
+    `WHERE (nt.tag_key = 'amenity' OR nt.tag_key = 'store') ` +
     `AND ST_X(n.location) >= LEAST((SELECT ST_X(location) FROM nodes WHERE node_id = ${node1}), (SELECT ST_X(location) FROM nodes WHERE node_id = ${node2})) ` +
     `AND ST_X(n.location) <= GREATEST((SELECT ST_X(location) FROM nodes WHERE node_id = ${node1}), (SELECT ST_X(location) FROM nodes WHERE node_id = ${node2})) ` +
     `AND ST_Y(n.location) >= LEAST((SELECT ST_Y(location) FROM nodes WHERE node_id = ${node1}), (SELECT ST_Y(location) FROM nodes WHERE node_id = ${node2})) ` +
@@ -45,12 +44,15 @@ const queries = {
     `AND n.node_id != ${node1} AND n.node_id != ${node2};`,
 
   radiusRangeCount: ({ node1 }, radius) =>
-    'SELECT COUNT(*) AS count FROM nodes ' +
-    'WHERE ST_Distance_Sphere(location, ' +
-    `(SELECT location FROM nodes WHERE node_id = ${node1})) <= ${radius};`,
+    'SELECT COUNT(*) as count FROM nodes n ' +
+    'JOIN node_tags nt ON n.node_id = nt.node_id ' +
+    `WHERE (nt.tag_key='amenity' OR nt.tag_key='store') ` +
+    `AND ST_Distance_Sphere(location, (SELECT location FROM nodes WHERE node_id = ${node1})) <= ${radius}; `,
   windowRangeCount: ({ node1, node2 }) =>
     'SELECT COUNT(*) AS count FROM nodes n ' +
-    `WHERE ST_X(n.location) >= LEAST((SELECT ST_X(location) FROM nodes WHERE node_id = ${node1}), (SELECT ST_X(location) FROM nodes WHERE node_id = ${node2})) ` +
+    'JOIN node_tags nt ON n.node_id = nt.node_id ' +
+    `WHERE (nt.tag_key = 'amenity' OR nt.tag_key = 'store') ` +
+    `AND ST_X(n.location) >= LEAST((SELECT ST_X(location) FROM nodes WHERE node_id = ${node1}), (SELECT ST_X(location) FROM nodes WHERE node_id = ${node2})) ` +
     `AND ST_X(n.location) <= GREATEST((SELECT ST_X(location) FROM nodes WHERE node_id = ${node1}), (SELECT ST_X(location) FROM nodes WHERE node_id = ${node2})) ` +
     `AND ST_Y(n.location) >= LEAST((SELECT ST_Y(location) FROM nodes WHERE node_id = ${node1}), (SELECT ST_Y(location) FROM nodes WHERE node_id = ${node2})) ` +
     `AND ST_Y(n.location) <= GREATEST((SELECT ST_Y(location) FROM nodes WHERE node_id = ${node1}), (SELECT ST_Y(location) FROM nodes WHERE node_id = ${node2})) ` +
@@ -59,7 +61,8 @@ const queries = {
   knn: ({ node1 }, k) =>
     'SELECT n.node_id,  n.location, ' +
     `ST_Distance_Sphere(n.location, (SELECT location FROM nodes WHERE node_id = ${node1})) AS distance ` +
-    `FROM nodes n WHERE n.node_id != ${node1} ` +
+    `FROM nodes n JOIN node_tags nt ON n.node_id = nt.node_id ` +
+    `WHERE n.node_id != ${node1} AND nt.tag_key = 'amenity' AND nt.tag_value = 'restaurant' ` +
     `ORDER BY distance LIMIT ${k};`,
 
   kClosestPair: ({ key, value, k }) =>
@@ -232,9 +235,9 @@ export async function runAllMySQL() {
   await client.query('SELECT NOW();');
   // await queryDistance();
   // await queryRadiusRange();
-  await queryWindowRange();
+  // await queryWindowRange();
   // await queryRangeCount();
-  // await queryKNN();
+  await queryKNN();
   // await queryKClosestPair();
   await client.close();
 }

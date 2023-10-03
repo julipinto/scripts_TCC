@@ -15,60 +15,87 @@ const SRID = 0;
 
 const queries = {
   distance: ({ node1, node2 }) => `SELECT
-    n1.node_id AS source_node_id,
-    n2.node_id AS target_node_id,
-    ST_DistanceSphere(n1.location, n2.location) AS distance
-    FROM nodes n1 JOIN
-    nodes n2 ON n1.node_id = ${node1} AND n2.node_id = ${node2};`,
+  ST_DistanceSphere(
+    (SELECT location FROM nodes WHERE node_id = ${node1}),
+    (SELECT location FROM nodes WHERE node_id = ${node2})
+  ) AS distance;`,
 
+  // radiusRange: ({ node1 }, radius) => `SELECT n.node_id, n.location
+  //   FROM nodes n
+  //   JOIN nodes central_node
+  //   ON central_node.node_id = ${node1}
   radiusRange: ({ node1 }, radius) => `SELECT n.node_id, n.location
-    FROM nodes n
-    JOIN nodes central_node
-    ON central_node.node_id = ${node1}
-    WHERE ST_DWithin(n.location, central_node.location, ${radius}, true)`,
+  FROM nodes n
+  JOIN node_tags nt ON n.node_id = nt.node_id
+  WHERE (nt.tag_key = 'amenity' OR nt.tag_key = 'store')
+  AND ST_DWithin(n.location, (SELECT location FROM nodes WHERE node_id = ${node1}), ${radius}, true);`,
 
   windowRange: ({ node1, node2 }) => `SELECT n.node_id,  n.location
     FROM nodes n
-    JOIN (SELECT
-        (SELECT location FROM nodes WHERE node_id = ${node1}) AS p1,
-        (SELECT location FROM nodes WHERE node_id = ${node2}) AS p2
-    ) AS envelope ON
-    ST_Contains(ST_MakeEnvelope(ST_X(envelope.p1), ST_Y(envelope.p1), ST_X(envelope.p2), ST_Y(envelope.p2), ${SRID})::geometry, n.location::geometry);`,
+    JOIN node_tags nt ON n.node_id = nt.node_id
+    WHERE (nt.tag_key = 'amenity' OR nt.tag_key = 'store')
+    AND ST_Within(
+      n.location,
+      ST_MakeEnvelope(
+        (SELECT ST_X(location) FROM nodes WHERE node_id = ${node1}),
+        (SELECT ST_Y(location) FROM nodes WHERE node_id = ${node1}),
+        (SELECT ST_X(location) FROM nodes WHERE node_id = ${node2}),
+        (SELECT ST_Y(location) FROM nodes WHERE node_id = ${node2}),
+        ${SRID})::geometry
+    )`,
 
   radiusRangeCount: ({ node1 }, radius) => `SELECT COUNT(*) AS count
     FROM nodes n
-    JOIN nodes central_node ON central_node.node_id = ${node1}
-    WHERE ST_DWithin(n.location, central_node.location, ${radius}, true);`,
+    JOIN node_tags nt ON n.node_id = nt.node_id
+    WHERE (nt.tag_key = 'amenity' OR nt.tag_key = 'store')
+    AND ST_DWithin(n.location, (SELECT location FROM nodes WHERE node_id = ${node1}), ${radius}, true);`,
 
   windowRangeCount: ({ node1, node2 }) => `SELECT COUNT(*) AS count
     FROM nodes n
-    JOIN (SELECT
-        (SELECT location FROM nodes WHERE node_id = ${node1}) AS p1,
-        (SELECT location FROM nodes WHERE node_id = ${node2}) AS p2
-    ) AS envelope ON
-    ST_Contains(ST_MakeEnvelope(ST_X(envelope.p1), ST_Y(envelope.p1), ST_X(envelope.p2), ST_Y(envelope.p2), ${SRID})::geometry, n.location::geometry);`,
+    JOIN node_tags nt ON n.node_id = nt.node_id
+    WHERE (nt.tag_key = 'amenity' OR nt.tag_key = 'store')
+    AND ST_Within(
+      n.location,
+      ST_MakeEnvelope(
+        (SELECT ST_X(location) FROM nodes WHERE node_id = ${node1}),
+        (SELECT ST_Y(location) FROM nodes WHERE node_id = ${node1}),
+        (SELECT ST_X(location) FROM nodes WHERE node_id = ${node2}),
+        (SELECT ST_Y(location) FROM nodes WHERE node_id = ${node2}),
+        ${SRID})::geometry
+    )`,
 
-  knn: ({ node1 }, k) => `SELECT
-    target_node.node_id AS target_id,
-    source_node.node_id AS neighbor_id,
-    ST_Distance(target_node.location, source_node.location) AS distance
-FROM
-    nodes target_node,
-    LATERAL (
-        SELECT
-            n.node_id,
-            n.location
-        FROM
-            nodes n
-        WHERE
-            n.node_id != target_node.node_id
-        ORDER BY
-            target_node.location <-> n.location
-        LIMIT
-            ${k}
-    ) AS source_node
-WHERE
-    target_node.node_id = ${node1};`,
+  //   knn: ({ node1 }, k) => `SELECT
+  //     target_node.node_id AS target_id,
+  //     source_node.node_id AS neighbor_id,
+  //     ST_DistanceSphere(target_node.location, source_node.location) AS distance
+  // FROM
+  //     nodes target_node,
+  //     LATERAL (
+  //         SELECT
+  //             n.node_id,
+  //             n.location
+  //         FROM
+  //             nodes n
+  //         WHERE
+  //             n.node_id != target_node.node_id
+  //         ORDER BY
+  //             target_node.location <-> n.location
+  //         LIMIT
+  //             ${k}
+  //     ) AS source_node
+  // WHERE
+  //     target_node.node_id = ${node1};`,
+
+  knn: (
+    { node1 },
+    k
+  ) => `SELECT n.node_id AS neighbor_id, n.location AS neighbor_location,
+    ST_DistanceSphere(n.location, (SELECT location FROM nodes WHERE node_id = ${node1})) AS distance
+    FROM nodes n
+    JOIN node_tags nt ON n.node_id = nt.node_id
+    WHERE n.node_id != ${node1} AND nt.tag_key = 'amenity' AND nt.tag_value = 'restaurant'
+    ORDER BY distance
+    LIMIT ${k};`,
 
   kClosestPair: ({ key, value, k }) =>
     'WITH tagged_nodes AS (' +
@@ -98,6 +125,7 @@ async function queryDistance() {
   console.time('Query All Distance');
   for (let pair of node_pairs) {
     let { result, time } = await client.query(queries.distance(pair));
+    // console.log(result);
     // re.push(result.rows[0].distance);
     fileHandler.writeOut({
       queryName: dirQueries.distance,
@@ -215,15 +243,15 @@ export async function runAllPostgres() {
   console.log('Running Postgres queries');
   await client.connect();
   await client.query('SELECT NOW();');
-  await queryDistance();
-  await queryRadiusRange();
-  await queryWindowRange();
-  await queryRangeCount();
-  await queryKNN();
-  await queryKClosestPair();
+  // await queryDistance();
+  // await queryRadiusRange();
+  // await queryWindowRange();
+  // await queryRangeCount();
+  // await queryKNN();
+  // await queryKClosestPair();
   await client.close();
 }
 
-// await runAllPostgres();
+await runAllPostgres();
 
 // await queryDistance();

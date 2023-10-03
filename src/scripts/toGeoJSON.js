@@ -239,7 +239,7 @@ async function allKClosestPairsGeoJSON() {
 
 async function allResultsGeoJSON() {
   await client.connect();
-  await getWindowResultsGeoJSON();
+  // await getWindowResultsGeoJSON();
   // await allRadiusResultsGeoJSON();
   // await allKNNResultsGeoJSON();
   // await allKClosestPairsGeoJSON();
@@ -247,4 +247,4 @@ async function allResultsGeoJSON() {
   await client.close();
 }
 
-await allResultsGeoJSON();
+// await allResultsGeoJSON();

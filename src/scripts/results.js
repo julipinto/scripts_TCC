@@ -276,4 +276,4 @@ export async function getKClosestPairs() {
 // await getRangeCountResults();
 // await getKNNResults();
 // await getKClosestPairs();
-console.log(await getKClosestPairs());
+// console.log(await getKClosestPairs());
