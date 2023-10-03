@@ -241,10 +241,10 @@ async function allResultsGeoJSON() {
   await client.connect();
   // await getWindowResultsGeoJSON();
   // await allRadiusResultsGeoJSON();
-  // await allKNNResultsGeoJSON();
+  await allKNNResultsGeoJSON();
   // await allKClosestPairsGeoJSON();
 
   await client.close();
 }
 
-// await allResultsGeoJSON();
+await allResultsGeoJSON();

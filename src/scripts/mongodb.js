@@ -106,6 +106,7 @@ async function queryRadiusRange() {
 
       const result = await client.nodes_collection
         .find({
+          $or: [{ amenity: { $exists: true } }, { shop: { $exists: true } }],
           location: {
             $geoWithin: {
               $centerSphere: [node1.location.coordinates, metresToRadians(r)],
@@ -142,6 +143,7 @@ async function queryWindowRange() {
 
     const result = await client.nodes_collection
       .find({
+        $or: [{ amenity: { $exists: true } }, { shop: { $exists: true } }],
         location: {
           $geoWithin: {
             $box: [node1.location.coordinates, node2.location.coordinates],
@@ -175,6 +177,7 @@ async function queryRangeCount() {
   for (const { node1, node2 } of fetchedPoints) {
     let startWindow = performance.now();
     let result = await client.nodes_collection.countDocuments({
+      $or: [{ amenity: { $exists: true } }, { shop: { $exists: true } }],
       location: {
         $geoWithin: {
           $box: [node1.location.coordinates, node2.location.coordinates],
@@ -198,13 +201,16 @@ async function queryRangeCount() {
 
     for (const r of radius) {
       let startRadius = performance.now();
-      let result = await client.nodes_collection.countDocuments({
-        location: {
-          $geoWithin: {
-            $centerSphere: [node1.location.coordinates, metresToRadians(r)],
+      const result = await client.nodes_collection
+        .find({
+          $or: [{ amenity: { $exists: true } }, { shop: { $exists: true } }],
+          location: {
+            $geoWithin: {
+              $centerSphere: [node1.location.coordinates, metresToRadians(r)],
+            },
           },
-        },
-      });
+        })
+        .toArray();
 
       let filenameRadius = fileHandler.rangeCountFileName({
         node1: node1._id,
@@ -245,7 +251,7 @@ async function queryKNN() {
             spherical: true,
           },
         },
-        { $match: { _id: { $ne: node1._id } } }, // Exclude node1
+        { $match: { _id: { $ne: node1._id }, amenity: 'restaurant' } }, // Exclude node1
         { $limit: k },
       ];
 
@@ -340,12 +346,12 @@ export async function runAllMongodb() {
   await client.connect();
   await fetchNodes();
 
-  await queryDistance();
-  await queryRadiusRange();
-  await queryWindowRange();
-  await queryRangeCount();
-  await queryKNN();
-  await queryKClosestPair();
+  // await queryDistance();
+  // await queryRadiusRange();
+  // await queryWindowRange();
+  // await queryRangeCount();
+  // await queryKNN();
+  // await queryKClosestPair();
   await client.close();
 }
 
