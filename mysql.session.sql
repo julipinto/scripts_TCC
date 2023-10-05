@@ -159,7 +159,6 @@ ORDER BY count DESC;
 -- @block 
 SELECT tag_key, tag_value, COUNT(*) AS count
 FROM node_tags
-WHERE tag_value LIKE '%restaurant%'
 GROUP BY tag_key, tag_value
 ORDER BY count DESC;
 
@@ -169,3 +168,12 @@ FROM node_tags
 WHERE tag_key LIKE 'amenity'
 GROUP BY tag_key, tag_value
 ORDER BY count DESC;
+
+
+-- @block
+SET @poly =
+       'Polygon((0 0,0 3,3 0,0 0),(1 1,1 2,2 1,1 1))';
+
+-- @block
+-- SELECT ST_Area(ST_GeomFromText(@poly));
+SELECT ST_GeomFromText('Polygon((0 0,0 3,3 0,0 0),(1 1,1 2,2 1,1 1))', 0)

@@ -1,4 +1,4 @@
-import MysqlConnection from '../connections/MysqllConnection.js';
+import MysqlConnection from '../connections/MysqlConnection.js';
 import { ks, node_pairs, radius, tagClosestPair } from '../utils/params.js';
 import FileHandler, { dirQueries } from '../utils/FileHandler.js';
 import { removeDuplicates } from '../utils/removeKCPDuplucates.js';
@@ -84,6 +84,8 @@ const queries = {
     'WHERE nt1.node_id != nt2.node_id ' +
     'ORDER BY distance ASC ' +
     `LIMIT ${k};`,
+  spatialJoin: (polygon_points) =>
+    `SELECT node_id FROM nodes WHERE ST_Intersects(location,  ST_GeomFromText('POLYGON((${polygon_points}))', 0));`,
 };
 
 // let {result} = await client.query('SELECT * FROM nodes ORDER BY RAND() LIMIT 40;');
@@ -227,6 +229,23 @@ async function queryKClosestPair() {
     });
   }
   console.timeEnd('Query All K Closest Pair');
+}
+
+async function querySpatialJoin() {
+  for ({ district, coordinates } of polygons) {
+    let polygon_points = polygonToMysql(coordinates);
+    let query = queries.spatialJoin(polygon_points);
+
+    let { time, result } = await client.query(query);
+
+    let filename = fileHandler.spatialJoinFileName({ district });
+
+    fileHandler.writeOut({
+      queryName: dirQueries.spatialJoin,
+      filename,
+      data: { time, result: result[0] },
+    });
+  }
 }
 
 export async function runAllMySQL() {

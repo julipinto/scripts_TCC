@@ -1,4 +1,4 @@
-import MysqlConnection from '../connections/MysqllConnection.js';
+import MysqlConnection from '../connections/MysqlConnection.js';
 import { node_pairs } from '../utils/params.js';
 
 async function getLowerLeftTopRight(params) {

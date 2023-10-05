@@ -54,6 +54,10 @@ export default class FileHandler {
     return `kcp_k${k}.${this.FORMAT}`;
   }
 
+  spatialJoinFileName({ district }) {
+    return `sj_${district}.${this.FORMAT}`;
+  }
+
   readIn({ filename, queryName }) {
     return readFile(
       resolve(join('out', this.database, queryName, filename)),
@@ -72,4 +76,5 @@ export const dirQueries = {
   radiusCount: 'radiusRQCount',
   windowCount: 'windowRQCount',
   kClosestPair: 'kclosestpair',
+  spatialJoin: 'spatialjoin',
 };
