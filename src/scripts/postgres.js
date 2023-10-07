@@ -4,8 +4,7 @@ import FileHandler, { dirQueries } from '../utils/FileHandler.js';
 import { removeDuplicates } from '../utils/removeKCPDuplucates.js';
 import {
   districtsFeatures,
-  polygonToMysql,
-  polygonToPostgres,
+  polygonToCoordinates,
 } from '../utils/districtsPolygonHandler.js';
 
 const fileHandler = new FileHandler('postgres');
@@ -227,7 +226,7 @@ async function queryKClosestPair() {
 async function querySpatialJoin() {
   console.time('Query All Spatial Join');
   for (const district_feature of districtsFeatures) {
-    let { district, coordinates } = polygonToMysql(district_feature);
+    let { district, coordinates } = polygonToCoordinates(district_feature);
     let query = queries.spatialJoin(coordinates);
 
     let { time, result } = await client.query(query);
@@ -247,16 +246,16 @@ export async function runAllPostgres() {
   console.log('Running Postgres queries');
   await client.connect();
   await client.query('SELECT NOW();');
-  // await queryDistance();
-  // await queryRadiusRange();
-  // await queryWindowRange();
-  // await queryRangeCount();
-  // await queryKNN();
-  // await queryKClosestPair();
+  await queryDistance();
+  await queryRadiusRange();
+  await queryWindowRange();
+  await queryRangeCount();
+  await queryKNN();
+  await queryKClosestPair();
   await querySpatialJoin();
   await client.close();
 }
 
-await runAllPostgres();
+// await runAllPostgres();
 
 // await queryDistance();

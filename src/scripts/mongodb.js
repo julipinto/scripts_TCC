@@ -252,7 +252,7 @@ async function queryKNN() {
             spherical: true,
           },
         },
-        { $match: { _id: { $ne: node1._id }, amenity: 'restaurant' } }, // Exclude node1
+        { $match: { _id: { $ne: node1._id }, amenity: 'restaurant' } },
         { $limit: k },
       ];
 
@@ -380,14 +380,12 @@ export async function runAllMongodb() {
   await client.connect();
   await fetchNodes();
 
-  // await queryDistance();
-  // await queryRadiusRange();
-  // await queryWindowRange();
-  // await queryRangeCount();
-  // await queryKNN();
-  // await queryKClosestPair();
+  await queryDistance();
+  await queryRadiusRange();
+  await queryWindowRange();
+  await queryRangeCount();
+  await queryKNN();
+  await queryKClosestPair();
   await querySpatialJoin();
   await client.close();
 }
-
-await runAllMongodb();

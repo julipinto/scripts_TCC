@@ -4,15 +4,8 @@ import FileHandler, { dirQueries } from '../utils/FileHandler.js';
 import { removeDuplicates } from '../utils/removeKCPDuplucates.js';
 import {
   districtsFeatures,
-  polygonToMysql,
+  polygonToCoordinates,
 } from '../utils/districtsPolygonHandler.js';
-
-// r = {
-//   time: 0,
-//   result: {
-//     rows: [],
-//     ...
-//   }
 
 const fileHandler = new FileHandler('mysql');
 
@@ -21,8 +14,6 @@ const client = new MysqlConnection({
   user: 'root',
   password: 'root',
 });
-// await client.connect();
-// await client.query('SELECT NOW();');
 
 const queries = {
   distance: ({ node1, node2 }) =>
@@ -99,14 +90,10 @@ const queries = {
 
 // // // // // // // // // // distance
 async function queryDistance() {
-  // let times = [];
-  // let results = [];
-  // let re = [];
   console.time('Query All Distance');
   for (let pair of node_pairs) {
     let { result, time } = await client.query(queries.distance(pair));
     let r = result[0][0].distance;
-    // re.push(r);
     let filename = fileHandler.distanceFileName(pair);
     fileHandler.writeOut({
       queryName: dirQueries.distance,
@@ -138,8 +125,6 @@ async function queryRadiusRange() {
 
 // // // // // // // // // // wrq
 async function queryWindowRange() {
-  // let { result } = await client.query(queries.wrq(node_pairs[0]));
-  // console.log(result);
   console.time('Query All Window Range');
   let tag = { tag_key: 'amenity', tag_value: 'restaurant' };
   for (let pair of node_pairs) {
@@ -157,12 +142,6 @@ async function queryWindowRange() {
 // await queryWindowRange();
 
 async function queryRangeCount() {
-  // let times = [];
-  // let results = [];
-  // console.log(
-  //   (await client.query(queries.windowRangeCount(node_pairs[0]))).result[0][0]
-  //     .count
-  // );
   console.time('Query All Range Count');
   for (let pair of node_pairs) {
     // ////////////// window
@@ -198,8 +177,6 @@ async function queryRangeCount() {
 }
 
 async function queryKNN() {
-  // let times = [];
-  // let results = [];
   console.time('Query All KNN');
   for (let pair of node_pairs) {
     for (let k of ks) {
@@ -241,7 +218,7 @@ async function queryKClosestPair() {
 async function querySpatialJoin() {
   console.time('Query All Spatial Join');
   for (const district_feature of districtsFeatures) {
-    let { district, coordinates } = polygonToMysql(district_feature);
+    let { district, coordinates } = polygonToCoordinates(district_feature);
     let query = queries.spatialJoin(coordinates);
 
     let { time, result } = await client.query(query);
@@ -261,20 +238,12 @@ export async function runAllMySQL() {
   console.log('Running MySQL queries');
   await client.connect();
   await client.query('SELECT NOW();');
-  // await queryDistance();
-  // await queryRadiusRange();
-  // await queryWindowRange();
-  // await queryRangeCount();
-  // await queryKNN();
-  // await queryKClosestPair();
+  await queryDistance();
+  await queryRadiusRange();
+  await queryWindowRange();
+  await queryRangeCount();
+  await queryKNN();
+  await queryKClosestPair();
   await querySpatialJoin();
   await client.close();
 }
-
-// let { result } = await client.query(
-//   'SELECT ST_Distance_Sphere(POINT(-74.0060, 40.7128), POINT(-118.2437, 34.0522)) AS distance;'
-// );
-// console.table(result[0]);
-
-await runAllMySQL();
-// await client.close();

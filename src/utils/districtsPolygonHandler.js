@@ -1,4 +1,4 @@
-export function polygonToMysql({ properties, geometry }) {
+export function polygonToCoordinates({ properties, geometry }) {
   return {
     district: properties.district,
     coordinates: geometry.coordinates[0]

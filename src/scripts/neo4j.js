@@ -6,10 +6,6 @@ import Neo4jConnection from '../connections/Neo4jConnection.js';
 import { ks, node_pairs, radius, tagClosestPair } from '../utils/params.js';
 import FileHandler, { dirQueries } from '../utils/FileHandler.js';
 import { removeDuplicates } from '../utils/removeKCPDuplucates.js';
-import {
-  districtsFeatures,
-  polygonToMysql,
-} from '../utils/districtsPolygonHandler.js';
 
 const fileHandler = new FileHandler('neo4j');
 
@@ -19,13 +15,7 @@ const client = new Neo4jConnection({
   password: 'root1234',
 });
 
-// await client.connect();
-
 const queries = {
-  // distance: ({ node1, node2 }) =>
-  //   `MATCH (node1:POINT {id: ${node1}}) ` +
-  //   `MATCH (node2:POINT {id: ${node2}}) ` +
-  //   'RETURN point.distance(node1.location, node2.location) AS distance;',
   distance: ({ node1, node2 }) =>
     `MATCH (node1:POINT {id: ${node1}}) ` +
     `MATCH (node2:POINT {id: ${node2}}) ` +
@@ -215,41 +205,16 @@ async function queryKClosestPair() {
   console.timeEnd('Query All K Closest Pair');
 }
 
-// async function querySpatialJoin() {
-//   console.time('Query All Spatial Join');
-//   for (const district_feature of districtsFeatures) {
-//     let { district, coordinates } = polygonToMysql(district_feature);
-//     let query = queries.spatialJoin(coordinates);
-
-//     let { time, result } = await client.query(query);
-
-//     let filename = fileHandler.spatialJoinFileName({ district });
-
-//     console.log(result.records.map((r) => r.get('polygon')));
-// fileHandler.writeOut({
-//   queryName: dirQueries.spatialJoin,
-//   filename,
-//   data: {
-//     time,
-//     result: result.records.map((r) =>
-//       r.get('target').properties.id.toNumber()
-//     ),
-//   },
-// });
-// }
-// console.timeEnd('Query All Spatial Join');
-// }
-
 export async function runAllNeo4j() {
   console.log('Running Neo4j queries');
   await client.connect();
   await client.query('RETURN timestamp() AS currentTimestamp;');
-  // await queryDistance();
-  // await queryRadiusRange();
-  // await queryWindowRange();
-  // await queryRangeCount();
-  // await queryKNN();
-  // await queryKClosestPair();
+  await queryDistance();
+  await queryRadiusRange();
+  await queryWindowRange();
+  await queryRangeCount();
+  await queryKNN();
+  await queryKClosestPair();
   await client.close();
 }
 

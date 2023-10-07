@@ -111,7 +111,9 @@ async function getKClosestPairsPlot() {
   // return data;
 }
 
-await getKClosestPairsPlot();
+// await getKClosestPairsPlot();
 
 // await getDistancePlot();
 // await getRadiusPlot();
+
+// async function get

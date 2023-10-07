@@ -19,16 +19,6 @@ import { districtsFeatures } from '../utils/districtsPolygonHandler.js';
 //   await runAllNeo4j();
 // }
 
-// export async function readDirs() {
-//   return await readdir('./out');
-// }
-
-// function mapFileHandlers(dirs) {
-//   return dirs.map((dir) => {
-//     return new FileHandler(dir);
-//   });
-// }
-
 export async function availbleFileHandlers() {
   let dirs = await readdir('./out');
   if (dirs.length === 0) throw new Error('No files found in ./out');
