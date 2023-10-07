@@ -1,22 +1,23 @@
 import { readdir } from 'fs/promises';
-import { runAllMySQL } from './mysql.js';
-import { runAllPostgres } from './postgres.js';
-import { runAllMongodb } from './mongodb.js';
-import { runAllNeo4j } from './neo4j.js';
+// import { runAllMySQL } from './mysql.js';
+// import { runAllPostgres } from './postgres.js';
+// import { runAllMongodb } from './mongodb.js';
+// import { runAllNeo4j } from './neo4j.js';
 
 import FileHandler, { dirQueries } from '../utils/FileHandler.js';
 import { node_pairs, ks, radius } from '../utils/params.js';
 import { exit } from 'process';
+import { districtsFeatures } from '../utils/districtsPolygonHandler.js';
 
-export async function runAll() {
-  await runAllMySQL();
-  console.log('');
-  await runAllPostgres();
-  console.log('');
-  await runAllMongodb();
-  console.log('');
-  await runAllNeo4j();
-}
+// export async function runAll() {
+//   await runAllMySQL();
+//   console.log('');
+//   await runAllPostgres();
+//   console.log('');
+//   await runAllMongodb();
+//   console.log('');
+//   await runAllNeo4j();
+// }
 
 // export async function readDirs() {
 //   return await readdir('./out');
@@ -263,6 +264,34 @@ export async function getKClosestPairs() {
   return { timestemps, results };
 }
 
+export async function getSpatialJoin() {
+  let fileHandlers = await availbleFileHandlers();
+  let timestemps = {};
+  let results = {};
+
+  for (const feature of districtsFeatures) {
+    for (const fileHandler of fileHandlers) {
+      let filename = fileHandler.spatialJoinFileName({
+        district: feature.properties.district,
+      });
+
+      let key = filename.split('.')[0];
+
+      if (!timestemps[key]) timestemps[key] = {};
+      if (!results[key]) results[key] = {};
+
+      let { time, result } = await fileHandler.readIn({
+        queryName: dirQueries.spatialJoin,
+        filename,
+      });
+
+      timestemps[key][fileHandler.database] = time;
+      results[key][fileHandler.database] = result;
+    }
+  }
+
+  return { timestemps, results };
+}
 // await getKClosestPairs();
 
 // await runAll();

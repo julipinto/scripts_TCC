@@ -6,6 +6,10 @@ import Neo4jConnection from '../connections/Neo4jConnection.js';
 import { ks, node_pairs, radius, tagClosestPair } from '../utils/params.js';
 import FileHandler, { dirQueries } from '../utils/FileHandler.js';
 import { removeDuplicates } from '../utils/removeKCPDuplucates.js';
+import {
+  districtsFeatures,
+  polygonToMysql,
+} from '../utils/districtsPolygonHandler.js';
 
 const fileHandler = new FileHandler('neo4j');
 
@@ -70,6 +74,14 @@ const queries = {
     `LIMIT ${k} ` +
     'RETURN target; ',
   // 'RETURN target, point.distance(target.location, source.location) AS distance; ',
+  // spatialJoin: (polygon_points) =>
+  // `WITH "POLYGON((${polygon_points}))" as polygon ` +
+  // 'MATCH (target:POINT) ' +
+  // 'WHERE (target.shop IS NOT NULL OR target.amenity IS NOT NULL) ' +
+  // // 'AND amanzi.withinPolygon(polygon, target.location) ' +
+  // // 'AND spatial.intersects(polygon, target.location) ' +
+  // 'AND target.location IN polygon ' +
+  // 'RETURN target',
 };
 
 async function queryDistance() {
@@ -203,6 +215,31 @@ async function queryKClosestPair() {
   console.timeEnd('Query All K Closest Pair');
 }
 
+// async function querySpatialJoin() {
+//   console.time('Query All Spatial Join');
+//   for (const district_feature of districtsFeatures) {
+//     let { district, coordinates } = polygonToMysql(district_feature);
+//     let query = queries.spatialJoin(coordinates);
+
+//     let { time, result } = await client.query(query);
+
+//     let filename = fileHandler.spatialJoinFileName({ district });
+
+//     console.log(result.records.map((r) => r.get('polygon')));
+// fileHandler.writeOut({
+//   queryName: dirQueries.spatialJoin,
+//   filename,
+//   data: {
+//     time,
+//     result: result.records.map((r) =>
+//       r.get('target').properties.id.toNumber()
+//     ),
+//   },
+// });
+// }
+// console.timeEnd('Query All Spatial Join');
+// }
+
 export async function runAllNeo4j() {
   console.log('Running Neo4j queries');
   await client.connect();
@@ -211,7 +248,7 @@ export async function runAllNeo4j() {
   // await queryRadiusRange();
   // await queryWindowRange();
   // await queryRangeCount();
-  await queryKNN();
+  // await queryKNN();
   // await queryKClosestPair();
   await client.close();
 }

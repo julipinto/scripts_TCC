@@ -3,6 +3,7 @@ import { ks, node_pairs, radius, tagClosestPair } from '../utils/params.js';
 import FileHandler, { dirQueries } from '../utils/FileHandler.js';
 import { removeDuplicates } from '../utils/removeKCPDuplucates.js';
 import { round } from '../utils/calc.js';
+import { districtsFeatures } from '../utils/districtsPolygonHandler.js';
 
 const fileHandler = new FileHandler('mongodb');
 
@@ -341,6 +342,39 @@ async function queryKClosestPair() {
   console.timeEnd('Query All K Closest Pair');
 }
 
+async function querySpatialJoin() {
+  console.time('Query All Spatial Join');
+  for (const district_feature of districtsFeatures) {
+    const start = performance.now();
+
+    const result = await client.nodes_collection
+      .find({
+        $or: [{ amenity: { $exists: true } }, { shop: { $exists: true } }],
+        location: {
+          $geoWithin: { $geometry: district_feature.geometry },
+        },
+      })
+      .toArray();
+
+    // let { time, result } = await client.query(query);
+
+    let filename = fileHandler.spatialJoinFileName({
+      district: district_feature.properties.district,
+    });
+
+    fileHandler.writeOut({
+      queryName: dirQueries.spatialJoin,
+      filename,
+
+      data: {
+        time: round(performance.now() - start),
+        result: result.map((node) => node._id),
+      },
+    });
+  }
+  console.timeEnd('Query All Spatial Join');
+}
+
 export async function runAllMongodb() {
   console.log('Running MongoDB queries');
   await client.connect();
@@ -352,7 +386,8 @@ export async function runAllMongodb() {
   // await queryRangeCount();
   // await queryKNN();
   // await queryKClosestPair();
+  await querySpatialJoin();
   await client.close();
 }
 
-// await runAllMongodb();
+await runAllMongodb();

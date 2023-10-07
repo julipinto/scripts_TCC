@@ -2,6 +2,10 @@ import MysqlConnection from '../connections/MysqlConnection.js';
 import { ks, node_pairs, radius, tagClosestPair } from '../utils/params.js';
 import FileHandler, { dirQueries } from '../utils/FileHandler.js';
 import { removeDuplicates } from '../utils/removeKCPDuplucates.js';
+import {
+  districtsFeatures,
+  polygonToMysql,
+} from '../utils/districtsPolygonHandler.js';
 
 // r = {
 //   time: 0,
@@ -85,7 +89,10 @@ const queries = {
     'ORDER BY distance ASC ' +
     `LIMIT ${k};`,
   spatialJoin: (polygon_points) =>
-    `SELECT node_id FROM nodes WHERE ST_Intersects(location,  ST_GeomFromText('POLYGON((${polygon_points}))', 0));`,
+    'SELECT n.node_id ' +
+    'FROM nodes n JOIN node_tags nt ON n.node_id = nt.node_id ' +
+    "WHERE (nt.tag_key='amenity' OR nt.tag_key='shop') " +
+    `AND ST_Intersects(n.location,  ST_GeomFromText('POLYGON((${polygon_points}))', 0));`,
 };
 
 // let {result} = await client.query('SELECT * FROM nodes ORDER BY RAND() LIMIT 40;');
@@ -232,9 +239,10 @@ async function queryKClosestPair() {
 }
 
 async function querySpatialJoin() {
-  for ({ district, coordinates } of polygons) {
-    let polygon_points = polygonToMysql(coordinates);
-    let query = queries.spatialJoin(polygon_points);
+  console.time('Query All Spatial Join');
+  for (const district_feature of districtsFeatures) {
+    let { district, coordinates } = polygonToMysql(district_feature);
+    let query = queries.spatialJoin(coordinates);
 
     let { time, result } = await client.query(query);
 
@@ -243,9 +251,10 @@ async function querySpatialJoin() {
     fileHandler.writeOut({
       queryName: dirQueries.spatialJoin,
       filename,
-      data: { time, result: result[0] },
+      data: { time, result: result[0].map(({ node_id }) => node_id) },
     });
   }
+  console.timeEnd('Query All Spatial Join');
 }
 
 export async function runAllMySQL() {
@@ -253,11 +262,12 @@ export async function runAllMySQL() {
   await client.connect();
   await client.query('SELECT NOW();');
   // await queryDistance();
-  await queryRadiusRange();
-  await queryWindowRange();
+  // await queryRadiusRange();
+  // await queryWindowRange();
   // await queryRangeCount();
   // await queryKNN();
   // await queryKClosestPair();
+  await querySpatialJoin();
   await client.close();
 }
 
@@ -266,5 +276,5 @@ export async function runAllMySQL() {
 // );
 // console.table(result[0]);
 
-// await runAllMySQL();
+await runAllMySQL();
 // await client.close();

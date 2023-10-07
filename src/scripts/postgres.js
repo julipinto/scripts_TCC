@@ -2,6 +2,11 @@ import PostgresConnection from '../connections/PostgresConnection.js';
 import { ks, node_pairs, radius, tagClosestPair } from '../utils/params.js';
 import FileHandler, { dirQueries } from '../utils/FileHandler.js';
 import { removeDuplicates } from '../utils/removeKCPDuplucates.js';
+import {
+  districtsFeatures,
+  polygonToMysql,
+  polygonToPostgres,
+} from '../utils/districtsPolygonHandler.js';
 
 const fileHandler = new FileHandler('postgres');
 
@@ -20,10 +25,6 @@ const queries = {
     (SELECT location FROM nodes WHERE node_id = ${node2})
   ) AS distance;`,
 
-  // radiusRange: ({ node1 }, radius) => `SELECT n.node_id, n.location
-  //   FROM nodes n
-  //   JOIN nodes central_node
-  //   ON central_node.node_id = ${node1}
   radiusRange: ({ node1 }, radius) => `SELECT n.node_id, n.location
   FROM nodes n
   JOIN node_tags nt ON n.node_id = nt.node_id
@@ -64,28 +65,6 @@ const queries = {
         ${SRID})::geometry
     )`,
 
-  //   knn: ({ node1 }, k) => `SELECT
-  //     target_node.node_id AS target_id,
-  //     source_node.node_id AS neighbor_id,
-  //     ST_DistanceSphere(target_node.location, source_node.location) AS distance
-  // FROM
-  //     nodes target_node,
-  //     LATERAL (
-  //         SELECT
-  //             n.node_id,
-  //             n.location
-  //         FROM
-  //             nodes n
-  //         WHERE
-  //             n.node_id != target_node.node_id
-  //         ORDER BY
-  //             target_node.location <-> n.location
-  //         LIMIT
-  //             ${k}
-  //     ) AS source_node
-  // WHERE
-  //     target_node.node_id = ${node1};`,
-
   knn: (
     { node1 },
     k
@@ -116,6 +95,12 @@ const queries = {
     'WHERE nt1.node_id != nt2.node_id ' +
     'ORDER BY distance ASC ' +
     `LIMIT ${k};`,
+
+  spatialJoin: (polygon_points) => `
+    SELECT n.node_id
+    FROM nodes n JOIN node_tags nt ON n.node_id = nt.node_id
+    WHERE (nt.tag_key='amenity' OR nt.tag_key='shop')
+    AND ST_Within(n.location,  ST_GeomFromText('POLYGON((${polygon_points}))', 0));`,
 };
 
 async function queryDistance() {
@@ -239,6 +224,25 @@ async function queryKClosestPair() {
   console.timeEnd('Query All K Closest Pair');
 }
 
+async function querySpatialJoin() {
+  console.time('Query All Spatial Join');
+  for (const district_feature of districtsFeatures) {
+    let { district, coordinates } = polygonToMysql(district_feature);
+    let query = queries.spatialJoin(coordinates);
+
+    let { time, result } = await client.query(query);
+
+    let filename = fileHandler.spatialJoinFileName({ district });
+
+    fileHandler.writeOut({
+      queryName: dirQueries.spatialJoin,
+      filename,
+      data: { time, result: result.rows.map(({ node_id }) => node_id) },
+    });
+  }
+  console.timeEnd('Query All Spatial Join');
+}
+
 export async function runAllPostgres() {
   console.log('Running Postgres queries');
   await client.connect();
@@ -247,11 +251,12 @@ export async function runAllPostgres() {
   // await queryRadiusRange();
   // await queryWindowRange();
   // await queryRangeCount();
-  await queryKNN();
+  // await queryKNN();
   // await queryKClosestPair();
+  await querySpatialJoin();
   await client.close();
 }
 
-// await runAllPostgres();
+await runAllPostgres();
 
 // await queryDistance();

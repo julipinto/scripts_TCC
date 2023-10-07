@@ -7,8 +7,10 @@ import {
   getRadiusResults,
   getKNNResults,
   getKClosestPairs,
+  getSpatialJoin,
 } from './results.js';
 import drawCircle from 'circle-to-polygon';
+import { districtsFeatures } from '../utils/districtsPolygonHandler.js';
 
 const randomColors = [
   '#FF5733',
@@ -237,12 +239,36 @@ async function allKClosestPairsGeoJSON() {
   }
 }
 
+async function allSpatialJoinGeoJSON() {
+  let { results } = await getSpatialJoin();
+
+  for (const [key, r] of Object.entries(results)) {
+    for (const [database, result] of Object.entries(r)) {
+      let district_name = key.split('_')[1];
+      let district_poly = districtsFeatures.find(
+        ({ properties: { district } }) => district_name == district
+      );
+      let features = await mapFeatures({ ids: result });
+
+      let geoJSON = {
+        type: 'FeatureCollection',
+        features: [...features, district_poly],
+      };
+
+      let dir = `${root}/${dirQueries.spatialJoin}/${key}`;
+      let file = `${dir}/${database}_${key}`;
+      await writeGeoJSON({ dir, file, geoJSON });
+    }
+  }
+}
+
 async function allResultsGeoJSON() {
   await client.connect();
   // await getWindowResultsGeoJSON();
   // await allRadiusResultsGeoJSON();
-  await allKNNResultsGeoJSON();
+  // await allKNNResultsGeoJSON();
   // await allKClosestPairsGeoJSON();
+  await allSpatialJoinGeoJSON();
 
   await client.close();
 }
