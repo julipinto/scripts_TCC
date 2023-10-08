@@ -40,6 +40,15 @@ if (requiredArgsMissing.length > 0) {
   );
 }
 
+if (
+  values.dbmanager &&
+  !['mysql', 'postgres', 'neo4j', 'mongodb', 'marklogic', 'surrealdb'].includes(
+    values.dbmanager
+  )
+) {
+  throw new Error(`Unsupported dbmanager: ${values.dbmanager}`);
+}
+
 const args = values;
 
 export { args };

@@ -13,7 +13,8 @@
     "db:sur": "node src/scripts/surrealdb.js",
     "res": "node src/scripts/results.js",
     "geojson": "node src/scripts/toGeoJSON.js",
-    "form:time": "node src/scripts/plottime.js"
+    "form:time": "node src/scripts/plottime.js",
+    "init": "node src/index.js"
   },
   "keywords": [],
   "author": "",
