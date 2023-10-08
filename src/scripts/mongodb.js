@@ -13,21 +13,6 @@ const client = new MongodbConnection({
   password: 'root',
 });
 
-// await client.connect();
-
-// const queries = {
-//   distance: ({ node1: sourceNodeId, node2: targetNodeId }) => {
-//     return {};
-//   },
-
-//   radiusRange: ({ node1 }, radius) => ``,
-//   windowRange: ({ node1, node2 }) => ``,
-//   radiusRangeCount: ({ node1 }, radius) => ``,
-//   windowRangeCount: ({ node1, node2 }) => ``,
-//   knn: ({ node1 }, k) => ``,
-//   shortestPath: ({ node1: source_node_id, node2: target_node_id }) => ``,
-// };
-
 // First we need to fetch the nodes from the database
 let fetchedPoints = [];
 

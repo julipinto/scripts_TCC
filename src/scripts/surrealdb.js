@@ -19,7 +19,9 @@ const queries = {
 
   radiusRange: ({ node1 }, radius) => `
     LET $source = (SELECT location FROM nodes:${node1})[0].location;
-    SELECT id FROM nodes WHERE geo::distance(location, $source) <= ${radius};
+    SELECT id FROM nodes
+    WHERE (shop != NONE OR amenity != NONE)
+    AND geo::distance(location, $source) <= ${radius};
   `,
   windowRange: ({ node1, node2 }) => `
     LET $x1 = (SELECT location FROM nodes:${node1})[0].location.coordinates[0];
@@ -28,6 +30,7 @@ const queries = {
     LET $y2 = (SELECT location FROM nodes:${node2})[0].location.coordinates[1];
     SELECT id FROM nodes
     WHERE
+      (shop != NONE OR amenity != NONE) AND
       location.coordinates[0] >= math::min([$x1, $x2]) AND
       location.coordinates[0] <= math::max([$x1, $x2]) AND
       location.coordinates[1] >= math::min([$y1, $y2]) AND
@@ -37,7 +40,7 @@ const queries = {
 
   radiusRangeCount: ({ node1 }, radius) => `
     LET $source = (SELECT location FROM nodes:${node1})[0].location;
-    COUNT(SELECT id FROM nodes WHERE geo::distance(location, $source) <= ${radius});
+    COUNT(SELECT id FROM nodes WHERE (shop != NONE OR amenity != NONE) AND geo::distance(location, $source) <= ${radius});
   `,
   windowRangeCount: ({ node1, node2 }) => `
     LET $x1 = (SELECT location FROM nodes:${node1})[0].location.coordinates[0];
@@ -46,6 +49,7 @@ const queries = {
     LET $y2 = (SELECT location FROM nodes:${node2})[0].location.coordinates[1];
     COUNT(SELECT id FROM nodes 
     WHERE 
+      (shop != NONE OR amenity != NONE) AND
       location.coordinates[0] >= math::min([$x1, $x2]) AND
       location.coordinates[0] <= math::max([$x1, $x2]) AND
       location.coordinates[1] >= math::min([$y1, $y2]) AND
@@ -57,7 +61,7 @@ const queries = {
     LET $source = (SELECT location FROM nodes:${node1})[0].location;
     SELECT id, geo::distance(location, $source) AS distance
     FROM nodes
-    WHERE id != nodes:${node1}
+    WHERE id != nodes:${node1} AND amenity="restaurant"
     ORDER BY distance LIMIT ${k};
   `,
 };
@@ -172,22 +176,19 @@ async function queryKNN() {
   console.timeEnd('Query All KNN');
 }
 
-async function queryKClosestPair() {
-  for (const k of ks) {
-    break;
-  }
-}
+// async function queryKClosestPair() {}
+
+// async function querySpatialJoin() {}
 
 export async function runAllSurrealdb() {
   console.log('Running SurrealDB queries');
   await client.connect();
-  // await queryDistance();
-  // await queryRadiusRange();
-  // await queryWindowRange();
-  // await queryRangeCount();
-  // await queryKNN();
-  await queryKClosestPair();
+  await queryDistance();
+  await queryRadiusRange();
+  await queryWindowRange();
+  await queryRangeCount();
+  await queryKNN();
+  // await queryKClosestPair();
+  // await querySpatialJoin();
   await client.close();
 }
-
-await runAllSurrealdb();

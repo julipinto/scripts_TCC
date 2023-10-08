@@ -264,11 +264,11 @@ async function allSpatialJoinGeoJSON() {
 
 async function allResultsGeoJSON() {
   await client.connect();
-  // await getWindowResultsGeoJSON();
-  // await allRadiusResultsGeoJSON();
-  // await allKNNResultsGeoJSON();
+  await getWindowResultsGeoJSON();
+  await allRadiusResultsGeoJSON();
+  await allKNNResultsGeoJSON();
   // await allKClosestPairsGeoJSON();
-  await allSpatialJoinGeoJSON();
+  // await allSpatialJoinGeoJSON();
 
   await client.close();
 }

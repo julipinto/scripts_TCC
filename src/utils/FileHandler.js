@@ -62,9 +62,14 @@ export default class FileHandler {
     return readFile(
       resolve(join('out', this.database, queryName, filename)),
       'utf8'
-    ).then((data) => {
-      return JSON.parse(data);
-    });
+    )
+      .then((data) => {
+        return JSON.parse(data);
+      })
+      .catch((err) => {
+        if (err.errno == -4058) return undefined;
+        throw err;
+      });
   }
 }
 

@@ -5,14 +5,24 @@ import {
   getRangeCountResults,
   getKClosestPairs,
   getKNNResults,
+  getSpatialJoin,
 } from './results.js';
+
+const sanitizeDatabaseKey = {
+  mysql: 'MySQL',
+  postgres: 'PostgreSQL',
+  mongodb: 'MongoDB',
+  neo4j: 'Neo4j',
+  surrealdb: 'SurrealDB',
+};
 
 function arrangeNoVariant(timestemps) {
   let data = {};
   for (let [_, all] of Object.entries(timestemps)) {
     for (let [database, time] of Object.entries(all)) {
-      if (!(database in data)) data[database] = [];
-      data[database].push(time);
+      let key = sanitizeDatabaseKey[database];
+      if (!(key in data)) data[key] = [];
+      data[key].push(time);
     }
   }
   return data;
@@ -117,3 +127,9 @@ async function getKClosestPairsPlot() {
 // await getRadiusPlot();
 
 // async function get
+
+async function getSpatialJoinPlot() {
+  const { timestemps } = await getSpatialJoin();
+  let map = arrangeNoVariant(timestemps);
+  return map;
+}

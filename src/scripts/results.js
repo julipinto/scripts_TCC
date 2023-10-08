@@ -41,12 +41,15 @@ export async function getDistanceResults() {
       if (!timestemps[keyfile]) timestemps[keyfile] = {};
       if (!results[keyfile]) results[keyfile] = {};
 
-      let { time, result } = await fileHandler.readIn({
+      let res = await fileHandler.readIn({
         queryName: dirQueries.distance,
         filename,
       });
-      timestemps[keyfile][fileHandler.database] = time;
-      results[keyfile][fileHandler.database] = result;
+
+      if (!res) continue;
+
+      timestemps[keyfile][fileHandler.database] = res.time;
+      results[keyfile][fileHandler.database] = res.result;
     }
   }
 
@@ -72,13 +75,15 @@ export async function getRadiusResults() {
         if (!results[pid]) results[pid] = {};
         if (!results[pid][fr]) results[pid][fr] = {};
 
-        let { time, result } = await fileHandler.readIn({
+        let res = await fileHandler.readIn({
           queryName: dirQueries.radius,
           filename,
         });
 
-        timestemps[pid][fr][fileHandler.database] = time;
-        results[pid][fr][fileHandler.database] = result;
+        if (!res) continue;
+
+        timestemps[pid][fr][fileHandler.database] = res.time;
+        results[pid][fr][fileHandler.database] = res.result;
       }
     }
   }
@@ -103,13 +108,15 @@ export async function getWindowResults() {
       if (!timestemps[keyfile]) timestemps[keyfile] = {};
       if (!results[keyfile]) results[keyfile] = {};
 
-      let { time, result } = await fileHandler.readIn({
+      let res = await fileHandler.readIn({
         queryName: dirQueries.window,
         filename,
       });
 
-      timestemps[keyfile][fileHandler.database] = time;
-      results[keyfile][fileHandler.database] = result;
+      if (!res) continue;
+
+      timestemps[keyfile][fileHandler.database] = res.time;
+      results[keyfile][fileHandler.database] = res.result;
     }
   }
 
@@ -139,13 +146,15 @@ export async function getRangeCountResults() {
       if (!timestempsWindow[keyfile]) timestempsWindow[keyfile] = {};
       if (!resultsWindow[keyfile]) resultsWindow[keyfile] = {};
 
-      let { time, result } = await fileHandler.readIn({
+      let res = await fileHandler.readIn({
         queryName: dirQueries.windowCount,
         filename,
       });
 
-      timestempsWindow[keyfile][fileHandler.database] = time;
-      resultsWindow[keyfile][fileHandler.database] = result;
+      if (!res) continue;
+
+      timestempsWindow[keyfile][fileHandler.database] = res.time;
+      resultsWindow[keyfile][fileHandler.database] = res.result;
 
       for (let r of radius) {
         let filename = fileHandler.rangeCountFileName({
@@ -162,13 +171,15 @@ export async function getRangeCountResults() {
         if (!resultsRadius[pid]) resultsRadius[pid] = {};
         if (!resultsRadius[pid][fr]) resultsRadius[pid][fr] = {};
 
-        let { time, result } = await fileHandler.readIn({
+        let res = await fileHandler.readIn({
           queryName: dirQueries.radiusCount,
           filename,
         });
 
-        timestempsRadius[pid][fr][fileHandler.database] = time;
-        resultsRadius[pid][fr][fileHandler.database] = result;
+        if (!res) continue;
+
+        timestempsRadius[pid][fr][fileHandler.database] = res.time;
+        resultsRadius[pid][fr][fileHandler.database] = res.result;
       }
     }
   }
@@ -199,13 +210,15 @@ export async function getKNNResults() {
         if (!results[pid]) results[pid] = {};
         if (!results[pid][fk]) results[pid][fk] = {};
 
-        let { time, result } = await fileHandler.readIn({
+        let res = await fileHandler.readIn({
           queryName: dirQueries.knn,
           filename,
         });
 
-        timestemps[pid][fk][fileHandler.database] = time;
-        results[pid][fk][fileHandler.database] = result;
+        if (!res) continue;
+
+        timestemps[pid][fk][fileHandler.database] = res.time;
+        results[pid][fk][fileHandler.database] = res.result;
 
         // timestemps[filename][fileHandler.database] = time;
         // results[filename][fileHandler.database] = result;
@@ -237,13 +250,15 @@ export async function getKClosestPairs() {
       if (!timestemps[fk]) timestemps[fk] = {};
       if (!results[fk]) results[fk] = {};
 
-      let { time, result } = await fileHandler.readIn({
+      let res = await fileHandler.readIn({
         queryName: dirQueries.kClosestPair,
         filename,
       });
 
-      timestemps[fk][fileHandler.database] = time;
-      results[fk][fileHandler.database] = result;
+      if (!res) continue;
+
+      timestemps[fk][fileHandler.database] = res.time;
+      results[fk][fileHandler.database] = res.result;
     }
   }
 
@@ -265,23 +280,27 @@ export async function getSpatialJoin() {
         district: feature.properties.district,
       });
 
-      let key = filename.split('.')[0];
+      let keyfile = filename.split('.')[0];
+      let [_, fk] = keyfile.split('_');
 
-      if (!timestemps[key]) timestemps[key] = {};
-      if (!results[key]) results[key] = {};
+      if (!timestemps[fk]) timestemps[fk] = {};
+      if (!results[fk]) results[fk] = {};
 
-      let { time, result } = await fileHandler.readIn({
+      let res = await fileHandler.readIn({
         queryName: dirQueries.spatialJoin,
         filename,
       });
 
-      timestemps[key][fileHandler.database] = time;
-      results[key][fileHandler.database] = result;
+      if (!res) continue;
+
+      timestemps[fk][fileHandler.database] = res.time;
+      results[fk][fileHandler.database] = res.result;
     }
   }
 
   return { timestemps, results };
 }
+
 // await getKClosestPairs();
 
 // await runAll();

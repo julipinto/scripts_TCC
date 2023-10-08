@@ -217,5 +217,3 @@ export async function runAllNeo4j() {
   await queryKClosestPair();
   await client.close();
 }
-
-await runAllNeo4j();

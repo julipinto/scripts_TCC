@@ -247,3 +247,5 @@ export async function runAllMySQL() {
   await querySpatialJoin();
   await client.close();
 }
+
+// await runAllMySQL();
