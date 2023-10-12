@@ -6,7 +6,7 @@ export default class Neo4jConnection {
   #client = null;
 
   constructor({ database, hostname, port, user, password }) {
-    this.hostname = hostname ?? 'localhost';
+    this.hostname = hostname ?? 'neo4j_container';
     this.port = port ?? 7687;
     this.database = database;
     this.user = user;

@@ -6,7 +6,7 @@ export default class MysqlConnection {
   #client = new SurrealDB();
 
   constructor({ database, hostname, port, user, password }) {
-    this.hostname = hostname ?? 'localhost';
+    this.hostname = hostname ?? 'surrealdb_container';
     this.port = port ?? 8000;
     this.database = database;
     this.user = user;

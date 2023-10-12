@@ -6,7 +6,7 @@ export default class MysqlConnection {
   #client = null;
 
   constructor({ database, hostname, port, user, password }) {
-    this.hostname = hostname ?? 'localhost';
+    this.hostname = hostname ?? 'mysql_container';
     this.port = port ?? 3306;
     this.database = database;
     this.user = user;

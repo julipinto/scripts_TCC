@@ -6,7 +6,7 @@ export default class PostgresConnection {
   #client = null;
 
   constructor({ database, hostname, port, user, password }) {
-    this.hostname = hostname ?? 'localhost';
+    this.hostname = hostname ?? 'postgres_container';
     this.port = port ?? 5432;
     this.database = database;
     this.user = user;
