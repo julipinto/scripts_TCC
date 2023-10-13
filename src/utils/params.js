@@ -25,4 +25,4 @@ export const radius = [50, 100, 150, 200];
 
 export const ks = [5, 10, 15, 20];
 
-export const tagClosestPair = { key: 'power', value: 'tower' };
+export const tagClosestPair = { key: 'amenity', value: 'travel_agency' };
