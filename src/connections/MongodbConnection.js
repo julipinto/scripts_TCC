@@ -9,7 +9,7 @@ export default class MongodbConnection {
   relations_collection = null;
 
   constructor({ database, hostname, port, user, password }) {
-    this.hostname = hostname ?? 'localhost';
+    this.hostname = hostname ?? 'mongo_container';
     this.port = port ?? 27017;
     this.database = database;
     this.user = user;
