@@ -50,11 +50,7 @@ async function queryDistance() {
           },
           distanceField: 'distance',
           spherical: true,
-        },
-      },
-      {
-        $match: {
-          _id: pair.node2._id,
+          query: { _id: pair.node2._id }
         },
       },
     ];
