@@ -11,6 +11,7 @@ const client = new MongodbConnection({
   database: 'map',
   user: 'root',
   password: 'root',
+  hostname: 'localhost',
 });
 
 // First we need to fetch the nodes from the database
@@ -32,25 +33,37 @@ async function fetchNodes() {
   console.timeEnd('Pre-Fetch All Nodes');
 }
 
+async function createIndexes() {
+  console.time('Creating indexes');
+  await client.nodes_collection.createIndex({ _id: 1 });
+  await client.nodes_collection.createIndex({
+    location: '2dsphere',
+  });
+  await client.nodes_collection.createIndex({ amenity: 1 });
+  await client.nodes_collection.createIndex({ shop: 1 });
+  console.timeEnd('Creating indexes');
+}
+
 function metresToRadians(metres) {
   return metres / 1000 / 6378.1;
 }
 
 async function queryDistance() {
   console.time('Query All Distance');
+  let count = 0;
 
   for (const pair of fetchedPoints) {
     let start = performance.now();
     let pipeline = [
       {
         $geoNear: {
+          query: { _id: pair.node2._id },
           near: {
             type: 'Point',
             coordinates: pair.node1.location.coordinates,
           },
           distanceField: 'distance',
           spherical: true,
-          query: { _id: pair.node2._id }
         },
       },
     ];
@@ -63,14 +76,19 @@ async function queryDistance() {
       node1: pair.node1._id,
       node2: pair.node2._id,
     });
+
+    let time = round(performance.now() - start);
     fileHandler.writeOut({
       queryName: dirQueries.distance,
       filename,
       data: {
-        time: round(performance.now() - start),
+        time: time,
         result: result[0].distance,
       },
     });
+
+    count++;
+    console.log(count, ' -- ', time);
   }
   console.timeEnd('Query All Distance');
 }
@@ -231,9 +249,12 @@ async function queryKNN() {
             },
             distanceField: 'distance',
             spherical: true,
+            query: {
+              $and: [{ _id: { $ne: node1._id }, amenity: 'restaurant' }],
+            },
           },
         },
-        { $match: { _id: { $ne: node1._id }, amenity: 'restaurant' } },
+        // { $match: { _id: { $ne: node1._id }, amenity: 'restaurant' } },
         { $limit: k },
       ];
 
@@ -359,6 +380,7 @@ async function querySpatialJoin() {
 export async function runAllMongodb() {
   console.log('Running MongoDB queries');
   await client.connect();
+  await createIndexes();
   await fetchNodes();
 
   await queryDistance();
@@ -370,3 +392,5 @@ export async function runAllMongodb() {
   await querySpatialJoin();
   await client.close();
 }
+
+// runAllMongodb();
