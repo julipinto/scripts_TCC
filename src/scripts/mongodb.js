@@ -11,7 +11,6 @@ const client = new MongodbConnection({
   database: 'map',
   user: 'root',
   password: 'root',
-  hostname: 'localhost',
 });
 
 // First we need to fetch the nodes from the database
@@ -68,7 +67,9 @@ async function queryDistance() {
       },
     ];
 
-    let aggregate = client.nodes_collection.aggregate(pipeline);
+    let aggregate = client.nodes_collection
+      .explain('allPlansExecution')
+      .aggregate(pipeline);
 
     let result = await aggregate.toArray();
 
