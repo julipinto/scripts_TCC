@@ -38,7 +38,7 @@ const queries = {
     'MATCH (target:POINT) ' +
     'WHERE (target.shop IS NOT NULL OR target.amenity IS NOT NULL) ' +
     `AND point.distance(source.location, target.location) < ${radius} ` +
-    'RETURN count(node2) AS nodeCount;',
+    'RETURN count(target) AS nodeCount;',
   windowCount: ({ node1, node2 }) =>
     'MATCH (target:POINT) ' +
     `MATCH (source1:POINT {id: ${node1}}) ` +
