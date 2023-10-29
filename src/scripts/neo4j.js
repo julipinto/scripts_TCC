@@ -40,9 +40,9 @@ const queries = {
     `AND point.distance(source.location, target.location) < ${radius} ` +
     'RETURN count(node2) AS nodeCount;',
   windowCount: ({ node1, node2 }) =>
-    'MATCH (node1:POINT) ' +
-    `MATCH (b1:POINT {id: ${node1}}) ` +
-    `MATCH (b2:POINT {id: ${node2}}) ` +
+    'MATCH (target:POINT) ' +
+    `MATCH (source1:POINT {id: ${node1}}) ` +
+    `MATCH (source2:POINT {id: ${node2}}) ` +
     'WHERE (target.shop IS NOT NULL OR target.amenity IS NOT NULL) ' +
     'AND point.withinBBox(target.location, source1.location, source2.location) ' +
     'RETURN count(node1) AS nodeCount;',
