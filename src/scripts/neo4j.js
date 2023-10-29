@@ -45,7 +45,7 @@ const queries = {
     `MATCH (source2:POINT {id: ${node2}}) ` +
     'WHERE (target.shop IS NOT NULL OR target.amenity IS NOT NULL) ' +
     'AND point.withinBBox(target.location, source1.location, source2.location) ' +
-    'RETURN count(node1) AS nodeCount;',
+    'RETURN count(target) AS nodeCount;',
   kClosestPair: ({ key, value, k }) =>
     `MATCH (node1:POINT {${key}: '${value}'}) ` +
     `MATCH (node2:POINT {${key}: '${value}'}) ` +
