@@ -1,9 +1,9 @@
 import MongodbConnection from '../connections/MongodbConnection.js';
-import { ks, node_pairs, radius, tagClosestPair } from '../utils/params.js';
 import FileHandler, { dirQueries } from '../utils/FileHandler.js';
-import { removeDuplicates } from '../utils/removeKCPDuplucates.js';
 import { round } from '../utils/calc.js';
 import { districtsFeatures } from '../utils/districtsPolygonHandler.js';
+import { ks, node_pairs, radius, tagClosestPair } from '../utils/params.js';
+import { removeDuplicates } from '../utils/removeKCPDuplucates.js';
 
 const fileHandler = new FileHandler('mongodb');
 
@@ -49,7 +49,6 @@ function metresToRadians(metres) {
 
 async function queryDistance() {
   console.time('Query All Distance');
-  let count = 0;
 
   for (const pair of fetchedPoints) {
     let start = performance.now();
@@ -87,14 +86,9 @@ async function queryDistance() {
         result: result[0].distance,
       },
     });
-
-    count++;
-    console.log(count, ' -- ', time);
   }
   console.timeEnd('Query All Distance');
 }
-// let re = [];
-
 // await queryDistance();
 
 async function queryRadiusRange() {
@@ -255,7 +249,6 @@ async function queryKNN() {
             },
           },
         },
-        // { $match: { _id: { $ne: node1._id }, amenity: 'restaurant' } },
         { $limit: k },
       ];
 
@@ -358,8 +351,6 @@ async function querySpatialJoin() {
         },
       })
       .toArray();
-
-    // let { time, result } = await client.query(query);
 
     let filename = fileHandler.spatialJoinFileName({
       district: district_feature.properties.district,
