@@ -66,9 +66,7 @@ async function queryDistance() {
       },
     ];
 
-    let aggregate = client.nodes_collection
-      .explain('allPlansExecution')
-      .aggregate(pipeline);
+    let aggregate = client.nodes_collection.aggregate(pipeline);
 
     let result = await aggregate.toArray();
 
