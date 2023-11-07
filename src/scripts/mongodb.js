@@ -376,8 +376,8 @@ export async function runAllMongodb() {
   // await queryRadiusRange();
   // await queryWindowRange();
   // await queryRangeCount();
-  await queryKClosestPair();
-  await querySpatialJoin();
+  // await queryKClosestPair();
+  // await querySpatialJoin();
   await queryKNN();
   await queryDistance();
   await client.close();
