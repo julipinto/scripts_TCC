@@ -6,7 +6,6 @@ import { readdir } from 'fs/promises';
 
 import FileHandler, { dirQueries } from '../utils/FileHandler.js';
 import { node_pairs, ks, radius } from '../utils/params.js';
-import { exit } from 'process';
 import { districtsFeatures } from '../utils/districtsPolygonHandler.js';
 
 // export async function runAll() {
@@ -19,17 +18,18 @@ import { districtsFeatures } from '../utils/districtsPolygonHandler.js';
 //   await runAllNeo4j();
 // }
 
-export async function availbleFileHandlers() {
-  let dirs = await readdir('./out');
+export async function availbleFileHandlers(out = 'out') {
+  // let dirs = await readdir('./out');
+  let dirs = await readdir(out);
   if (dirs.length === 0) throw new Error('No files found in ./out');
 
   return dirs.map((dir) => {
-    return new FileHandler(dir);
+    return new FileHandler(dir, out);
   });
 }
 
-export async function getDistanceResults() {
-  let fileHandlers = await availbleFileHandlers();
+export async function getDistanceResults(out = 'out') {
+  let fileHandlers = await availbleFileHandlers(out);
   let timestemps = {};
   let results = {};
 
@@ -58,8 +58,8 @@ export async function getDistanceResults() {
   return { timestemps, results };
 }
 
-export async function getRadiusResults() {
-  let fileHandlers = await availbleFileHandlers();
+export async function getRadiusResults(out = 'out') {
+  let fileHandlers = await availbleFileHandlers(out);
   let timestemps = {};
   let results = {};
 
@@ -94,10 +94,10 @@ export async function getRadiusResults() {
   return { timestemps, results };
 }
 
-// await getRadiusResults();
+// await getRadiusResults(out);
 
-export async function getWindowResults() {
-  let fileHandlers = await availbleFileHandlers();
+export async function getWindowResults(out = 'out') {
+  let fileHandlers = await availbleFileHandlers(out);
   let timestemps = {};
   let results = {};
 
@@ -125,10 +125,10 @@ export async function getWindowResults() {
   return { timestemps, results };
 }
 
-// await getWindowResults();
+// await getWindowResults(out);
 
-export async function getRangeCountResults() {
-  let fileHandlers = await availbleFileHandlers();
+export async function getRangeCountResults(out = 'out') {
+  let fileHandlers = await availbleFileHandlers(out);
 
   let timestempsWindow = {};
   let resultsWindow = {};
@@ -191,10 +191,10 @@ export async function getRangeCountResults() {
   return { timestempsWindow, resultsWindow, timestempsRadius, resultsRadius };
 }
 
-// await getRangeCountResults();
+// await getRangeCountResults(out);
 
-export async function getKNNResults() {
-  let fileHandlers = await availbleFileHandlers();
+export async function getKNNResults(out = 'out') {
+  let fileHandlers = await availbleFileHandlers(out);
   let timestemps = {};
   let results = {};
 
@@ -231,10 +231,10 @@ export async function getKNNResults() {
   return { timestemps, results };
 }
 
-// await getKNNResults();
+// await getKNNResults(out);
 
-export async function getKClosestPairs() {
-  let fileHandlers = await availbleFileHandlers();
+export async function getKClosestPairs(out = 'out') {
+  let fileHandlers = await availbleFileHandlers(out);
   let timestemps = {};
   let results = {};
 
@@ -269,8 +269,8 @@ export async function getKClosestPairs() {
   return { timestemps, results };
 }
 
-export async function getSpatialJoin() {
-  let fileHandlers = await availbleFileHandlers();
+export async function getSpatialJoin(out = 'out') {
+  let fileHandlers = await availbleFileHandlers(out);
   let timestemps = {};
   let results = {};
 

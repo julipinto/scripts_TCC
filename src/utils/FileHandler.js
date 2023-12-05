@@ -3,8 +3,9 @@ import { createWriteStream, existsSync, mkdirSync } from 'fs';
 import { readFile } from 'fs/promises';
 
 export default class FileHandler {
-  constructor(database) {
+  constructor(database, out = 'out') {
     this.database = database;
+    this.out = out;
     this.FORMAT = 'json';
   }
 
@@ -17,7 +18,7 @@ export default class FileHandler {
 
   writeOut({ queryName, filename, data }) {
     let dir = this.#createDirIfNotExists(
-      resolve(join('out', this.database, queryName))
+      resolve(join(this.out, this.database, queryName))
     );
     let path = resolve(join(dir, filename));
     let writeStream = createWriteStream(path);
@@ -60,7 +61,7 @@ export default class FileHandler {
 
   readIn({ filename, queryName }) {
     return readFile(
-      resolve(join('out', this.database, queryName, filename)),
+      resolve(join(this.out, this.database, queryName, filename)),
       'utf8'
     )
       .then((data) => {

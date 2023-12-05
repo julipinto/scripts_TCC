@@ -176,10 +176,6 @@ async function queryKNN() {
   console.timeEnd('Query All KNN');
 }
 
-// async function queryKClosestPair() {}
-
-// async function querySpatialJoin() {}
-
 export async function runAllSurrealdb() {
   console.log('Running SurrealDB queries');
   await client.connect();
