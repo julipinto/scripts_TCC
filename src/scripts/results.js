@@ -238,8 +238,6 @@ export async function getKClosestPairs(out = 'out') {
   let timestemps = {};
   let results = {};
 
-  // console.log(fileHandlers);
-
   for (let k of ks) {
     for (let fileHandler of fileHandlers) {
       // let filename = fileHandler.kClosestPairsFileName({ k });

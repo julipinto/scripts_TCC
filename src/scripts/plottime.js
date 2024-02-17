@@ -141,12 +141,16 @@ async function getWindowPlot() {
     let data = arrangeNoVariant(timestemps);
     plots[sanitizeOutputKey[out_key]] = data;
   }
+  saveNoVariant(
+    plots,
+    dirQueries.window 
+  )
   // console.log(JSON.stringify(plots));
   // console.log(plots);
   return plots;
 }
 
-// getWindowPlot();
+getWindowPlot();
 
 // 1 variante + 4 variante ok
 async function getRangeCountPlot() {
@@ -192,38 +196,34 @@ async function getKNNPlot() {
 
 // 1 variante
 async function getKClosestPairsPlot() {
-  const { timestemps } = await getKClosestPairs();
-  // console.log(timestemps);
-  //  TEM QUE VER COMO É QUE VAI FAZER COM ESSE AQUI PRA COLOCAR NO GRÁFICO
-  //  RESULTADO VAI SER TIPO ESSE AQUI:
-  //   {
-  //   k5: {
-  //     mongodb: 2257.306,
-  //     mysql: 68.246,
-  //     neo4j: 322.769,
-  //     postgres: 440.799
-  //   },
-  //   k10: { mongodb: 2053.46, mysql: 70.351, neo4j: 251.5, postgres: 60.126 },
-  //   k15: {
-  //     mongodb: 2043.918,
-  //     mysql: 64.565,
-  //     neo4j: 243.742,
-  //     postgres: 62.369
-  //   },
-  //   k20: {
-  //     mongodb: 2163.919,
-  //     mysql: 63.921,
-  //     neo4j: 236.978,
-  //     postgres: 69.091
-  //   }
-  // }
+  const timestemps = {};
+  for (let [out_key, out] of Object.entries(outs)) {
+    timestemps[sanitizeOutputKey[out_key]] = (
+      await getKClosestPairs(out)
+    ).timestemps;
+  }
 
-  // let data = arrangeVariant(timestemps);
-  // console.log(data);
-  // return data;
+  let map = {}
+
+  for (let [dataset, result_out] of Object.entries(timestemps)) {
+    for (let [variant, databases_result] of Object.entries(result_out)) {
+      for (let [db_key, time] of Object.entries(databases_result)) {
+        let database = sanitizeDatabaseKey[db_key];
+        if (!(variant in map)) map[variant] = {};
+        if (!(dataset in map[variant])) map[variant][dataset] = {};
+        if (!(database in map[variant][dataset]))
+          map[variant][dataset][database] = [];
+
+        map[variant][dataset][database].push(time);
+      }
+    }
+  }
+
+  saveVariant(map, dirQueries.kClosestPair);
+  return map;
 }
 
-// await getKClosestPairsPlot();
+await getKClosestPairsPlot();
 
 // await getDistancePlot();
 // await getRadiusPlot();
@@ -253,4 +253,4 @@ async function getSpatialJoinPlot() {
   return map;
 }
 
-getSpatialJoinPlot();
+// getSpatialJoinPlot();

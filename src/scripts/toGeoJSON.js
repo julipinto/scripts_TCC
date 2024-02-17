@@ -57,6 +57,7 @@ const client = new MongodbConnection({
   database: 'map',
   user: 'root',
   password: 'root',
+  hostname: 'localhost'
 });
 
 async function writeGeoJSON({ dir, file, geoJSON }) {
@@ -264,9 +265,9 @@ async function allSpatialJoinGeoJSON() {
 
 async function allResultsGeoJSON() {
   await client.connect();
-  await getWindowResultsGeoJSON();
+  // await getWindowResultsGeoJSON();
   await allRadiusResultsGeoJSON();
-  await allKNNResultsGeoJSON();
+  // await allKNNResultsGeoJSON();
   // await allKClosestPairsGeoJSON();
   // await allSpatialJoinGeoJSON();
 

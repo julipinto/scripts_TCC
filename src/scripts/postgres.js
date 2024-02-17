@@ -13,6 +13,7 @@ const client = new PostgresConnection({
   database: 'map',
   user: 'root',
   password: 'root',
+  hostname: 'localhost'
 });
 
 const SRID = 0;
@@ -248,11 +249,11 @@ export async function runAllPostgres() {
   await client.query('SELECT NOW();');
   await queryDistance();
   await queryRadiusRange();
-  await queryWindowRange();
-  await queryRangeCount();
-  await queryKNN();
-  await queryKClosestPair();
-  await querySpatialJoin();
+  // await queryWindowRange();
+  // await queryRangeCount();
+  // await queryKNN();
+  // await queryKClosestPair();
+  // await querySpatialJoin();
   await client.close();
 }
 
